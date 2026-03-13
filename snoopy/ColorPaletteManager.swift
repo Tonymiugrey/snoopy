@@ -110,7 +110,7 @@ class ColorPaletteManager {
     func getColorPalette(for weatherString: String?, timeOfDay: String? = nil) -> ColorPalette? {
         let currentTimeOfDay = timeOfDay ?? getCurrentTimeOfDay()
         let roll = Double.random(in: 0..<1)
-        let useWeather = roll < 0.6
+        let useWeather = roll < 0.45
 
         if useWeather {
             weatherPickCount += 1
