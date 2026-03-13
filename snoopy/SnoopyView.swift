@@ -40,12 +40,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     private func commonInit() {
         animationTimeInterval = 1.0 / 24.0
 
-        // 通知所有已存在的实例进入 lame-duck 状态
-        // 必须在自己注册为观察者之前发出，确保旧实例能收到
-        NotificationCenter.default.post(
-            name: SnoopyScreenSaverView.newInstanceNotification, object: self)
-
-        // 注册监听新实例通知，当有更新的实例创建时，本实例进入 lame-duck
+        // 注册监听新实例通知，当同屏有更新的实例创建时，本实例进入 lame-duck
+        // 注意：通知的发送移到 startAnimation()，届时才能获取屏幕 displayID
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(onNewInstance(_:)),
@@ -65,11 +61,27 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         setNotifications()
     }
 
+    /// 获取当前视图所在屏幕的 CGDirectDisplayID。
+    /// 在 startAnimation() 之前可能为 nil（视图尚未进入窗口层级）。
+    private var currentDisplayID: UInt32? {
+        guard let screenNumber = self.window?.screen?.deviceDescription[
+            NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        else { return nil }
+        return screenNumber.uint32Value
+    }
+
     // 收到新实例通知时，将自身标记为 lame-duck 并停止工作
+    // 仅当新实例与自己在同一块屏幕上时才让位，避免误杀其他屏幕的合法实例
     @objc private func onNewInstance(_ notification: Notification) {
         // 排除自己发出的通知
         if let sender = notification.object as? SnoopyScreenSaverView, sender === self {
             return
+        }
+        // 仅 lame-duck 同一屏幕的实例
+        if let senderDisplayID = notification.userInfo?["displayID"] as? UInt32,
+           let myDisplayID = currentDisplayID
+        {
+            guard senderDisplayID == myDisplayID else { return }
         }
         guard !isLameDuck else { return }
         isLameDuck = true
@@ -202,6 +214,17 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
         // lame-duck 实例不响应动画请求
         guard !isLameDuck else { return }
+
+        // 在 startAnimation() 时视图已在窗口中，能拿到屏幕 displayID。
+        // 通知同屏的旧实例让位（不影响其他屏幕上的合法实例）。
+        let displayID = currentDisplayID
+        var userInfo: [String: Any] = [:]
+        if let id = displayID { userInfo["displayID"] = id }
+        NotificationCenter.default.post(
+            name: SnoopyScreenSaverView.newInstanceNotification,
+            object: self,
+            userInfo: userInfo
+        )
 
         if isSetupComplete && sequenceManager != nil {
             setupInitialStateAndPlay()
