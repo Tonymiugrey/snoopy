@@ -52,14 +52,14 @@ class OverlayManager {
         let (basicCandidates, conditionalCandidates) = getFilteredVIWECandidates()
 
         let clipToPlay: SnoopyClip?
-        if !conditionalCandidates.isEmpty && Double.random(in: 0..<1) < 0.65 {
-            // 65%：从天气/时间特化内容中抽取
+        if !conditionalCandidates.isEmpty && Double.random(in: 0..<1) < 0.75 {
+            // 75%：从天气/时间特化内容中抽取
             clipToPlay = conditionalCandidates.randomElement()
-            debugLog("🎲 65% 走特化分支，候选数: \(conditionalCandidates.count)")
+            debugLog("🎲 75% 走特化分支，候选数: \(conditionalCandidates.count)")
         } else {
-            // 35%（或无特化内容时）：从基础内容中抽取，基础为空时兜底特化
+            // 25%（或无特化内容时）：从基础内容中抽取，基础为空时兜底特化
             clipToPlay = basicCandidates.randomElement() ?? conditionalCandidates.randomElement()
-            debugLog("🎲 35% 走基础分支，候选数: \(basicCandidates.count)")
+            debugLog("🎲 25% 走基础分支，候选数: \(basicCandidates.count)")
         }
 
         guard let clip = clipToPlay else {
