@@ -17,6 +17,7 @@ struct ColorPalette {
 
 class ColorPaletteManager {
     private var weatherColorPalettes: [String: ColorPalette] = [:]
+    private var genericColorPalettes: [String: ColorPalette] = [:]
 
     init() {
         loadColorPalettes()
@@ -26,37 +27,52 @@ class ColorPaletteManager {
         guard
             let plistPath = Bundle(for: type(of: self)).path(
                 forResource: "ColorPaletteConfig", ofType: "plist"),
-            let plistData = NSDictionary(contentsOfFile: plistPath),
-            let palettesDict = plistData["weatherColorPalettes"] as? [String: [String: Any]]
+            let plistData = NSDictionary(contentsOfFile: plistPath)
         else {
             debugLog("❌ 无法加载 ColorPaletteConfig.plist")
             return
         }
 
-        for (key, paletteInfo) in palettesDict {
-            guard let weather = paletteInfo["weather"] as? [String],
-                let timeOfDay = paletteInfo["timeOfDay"] as? String,
-                let backgroundColorDict = paletteInfo["backgroundColor"] as? [String: Any],
-                let overlayColorDict = paletteInfo["overlayColor"] as? [String: Any]
-            else {
-                debugLog("⚠️ 跳过格式错误的调色板配置: \(key)")
-                continue
+        if let palettesDict = plistData["weatherColorPalettes"] as? [String: [String: Any]] {
+            for (key, paletteInfo) in palettesDict {
+                guard
+                    let timeOfDay = paletteInfo["timeOfDay"] as? String,
+                    let backgroundColorDict = paletteInfo["backgroundColor"] as? [String: Any],
+                    let overlayColorDict = paletteInfo["overlayColor"] as? [String: Any]
+                else {
+                    debugLog("⚠️ 跳过格式错误的天气调色板配置: \(key)")
+                    continue
+                }
+                let weather = paletteInfo["weather"] as? [String] ?? []
+                weatherColorPalettes[key] = ColorPalette(
+                    weather: weather,
+                    timeOfDay: timeOfDay,
+                    backgroundColor: createColor(from: backgroundColorDict),
+                    overlayColor: createColor(from: overlayColorDict)
+                )
             }
-
-            let backgroundColor = createColor(from: backgroundColorDict)
-            let overlayColor = createColor(from: overlayColorDict)
-
-            let palette = ColorPalette(
-                weather: weather,
-                timeOfDay: timeOfDay,
-                backgroundColor: backgroundColor,
-                overlayColor: overlayColor
-            )
-
-            weatherColorPalettes[key] = palette
         }
 
-        debugLog("🎨 成功加载 \(weatherColorPalettes.count) 个调色板配置")
+        if let palettesDict = plistData["genericColorPalettes"] as? [String: [String: Any]] {
+            for (key, paletteInfo) in palettesDict {
+                guard
+                    let timeOfDay = paletteInfo["timeOfDay"] as? String,
+                    let backgroundColorDict = paletteInfo["backgroundColor"] as? [String: Any],
+                    let overlayColorDict = paletteInfo["overlayColor"] as? [String: Any]
+                else {
+                    debugLog("⚠️ 跳过格式错误的常规调色板配置: \(key)")
+                    continue
+                }
+                genericColorPalettes[key] = ColorPalette(
+                    weather: [],
+                    timeOfDay: timeOfDay,
+                    backgroundColor: createColor(from: backgroundColorDict),
+                    overlayColor: createColor(from: overlayColorDict)
+                )
+            }
+        }
+
+        debugLog("🎨 加载调色板: 天气 \(weatherColorPalettes.count) 个, 常规 \(genericColorPalettes.count) 个")
     }
 
     private func createColor(from dict: [String: Any]) -> NSColor {
@@ -88,77 +104,66 @@ class ColorPaletteManager {
         }
     }
 
-    func getColorPalette(for weatherString: String?) -> ColorPalette? {
-        let currentTimeOfDay = getCurrentTimeOfDay()
+    private var weatherPickCount = 0
+    private var genericPickCount = 0
 
-        // 如果有天气信息，尝试模糊匹配
+    func getColorPalette(for weatherString: String?, timeOfDay: String? = nil) -> ColorPalette? {
+        let currentTimeOfDay = timeOfDay ?? getCurrentTimeOfDay()
+        let roll = Double.random(in: 0..<1)
+        let useWeather = roll < 0.65
+
+        if useWeather {
+            weatherPickCount += 1
+            debugLog("🎲 随机选择天气调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]")
+            return getWeatherPalette(for: weatherString, timeOfDay: currentTimeOfDay)
+        } else {
+            genericPickCount += 1
+            debugLog("🎲 随机选择常规调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]")
+            return getGenericPalette(timeOfDay: currentTimeOfDay)
+        }
+    }
+
+    private func getWeatherPalette(for weatherString: String?, timeOfDay: String) -> ColorPalette? {
+        // 有天气 code → 精确匹配
         if let weather = weatherString, !weather.isEmpty {
-            // 查找匹配天气和时间的调色板
             for (_, palette) in weatherColorPalettes {
-                if palette.timeOfDay == currentTimeOfDay {
-                    // 模糊匹配天气关键词
-                    for weatherKeyword in palette.weather {
-                        if weather.contains(weatherKeyword) {
-                            debugLog(
-                                "🎨 匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword), 时间: \(currentTimeOfDay)"
-                            )
-                            return palette
-                        }
-                    }
-                }
-            }
-
-            // 如果没有找到匹配的天气+时间组合，尝试只匹配天气（任意时间）
-            for (_, palette) in weatherColorPalettes {
-                for weatherKeyword in palette.weather {
-                    if weather.contains(weatherKeyword) {
-                        debugLog("🎨 部分匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword) (忽略时间)")
+                if palette.timeOfDay == timeOfDay {
+                    if palette.weather.contains(weather) {
+                        debugLog("🎨 天气调色板匹配 - code: \(weather), 时间: \(timeOfDay)")
                         return palette
                     }
                 }
             }
-
-            debugLog("⚠️ 未找到匹配的天气调色板: \(weather)，将使用时间随机选择")
+            // 忽略时间再试一次
+            for (_, palette) in weatherColorPalettes {
+                if palette.weather.contains(weather) {
+                    debugLog("🎨 天气调色板匹配 (忽略时间) - code: \(weather)")
+                    return palette
+                }
+            }
+            debugLog("⚠️ 未找到匹配天气 code: \(weather)，回退到时间随机")
         }
 
-        // 如果没有天气信息或未匹配到，根据当前时间随机选择一组颜色
-        let matchingPalettes = weatherColorPalettes.values.filter { $0.timeOfDay == currentTimeOfDay }
-
-        if let randomPalette = matchingPalettes.randomElement() {
-            debugLog("🎨 随机选择调色板 - 时间: \(currentTimeOfDay)")
-            return randomPalette
+        // 天气获取失败 或 未匹配 → 按时间随机 (现有缺省逻辑)
+        let matching = weatherColorPalettes.values.filter { $0.timeOfDay == timeOfDay }
+        if let palette = matching.randomElement() {
+            debugLog("🎨 天气调色板时间随机 - 时间: \(timeOfDay)")
+            return palette
         }
+        return weatherColorPalettes.values.randomElement()
+    }
 
-        // 如果连时间匹配都没有，返回任意一个调色板
-        if let fallbackPalette = weatherColorPalettes.values.randomElement() {
-            debugLog("🎨 使用备选调色板")
-            return fallbackPalette
+    private func getGenericPalette(timeOfDay: String) -> ColorPalette? {
+        let matching = genericColorPalettes.values.filter { $0.timeOfDay == timeOfDay }
+        if let palette = matching.randomElement() {
+            debugLog("🎨 常规调色板时间随机 - 时间: \(timeOfDay)")
+            return palette
         }
-
-        debugLog("❌ 无法获取任何调色板")
-        return nil
+        return genericColorPalettes.values.randomElement()
     }
 
     // 获取原始天气信息进行模糊匹配
     func getWeatherString(from weatherManager: WeatherManager) -> String? {
-        // 首先尝试从API获取原始天气字符串
-        if let rawWeather = weatherManager.getRawWeatherString() {
-            return rawWeather
-        }
-
-        //        // 如果没有原始字符串，根据枚举返回基本描述
-        //        if weatherManager.isAPIAvailable() {
-        //            let weather = weatherManager.getCurrentWeather()
-        //            switch weather {
-        //            case .sunny:
-        //                return "晴"
-        //            case .rainy:
-        //                return "雨"
-        //            case .cloudy:
-        //                return "阴"
-        //            }
-        //        }
-
-        return nil
+        return weatherManager.getRawWeatherString()
     }
 }

@@ -240,7 +240,7 @@ class PlaybackManager {
         if clipToPlay.type == SnoopyClip.ClipType.BP_Node
             || clipToPlay.type == SnoopyClip.ClipType.AP_Loop
         {
-            let overlayChance = 0.2
+            let overlayChance = 0.45
             if Double.random(in: 0...1) < overlayChance {
                 debugLog("🎯 触发VI/WE叠加层概率检查通过")
                 overlayManager?.tryPlayVIWEOverlay()

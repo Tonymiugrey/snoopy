@@ -341,4 +341,18 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         stateManager.currentClipIndex = 0
         playbackManager.playNextClipInQueue()
     }
+
+    // MARK: - Manual Weather Control
+
+    func setManualWeather(_ weatherCode: String) {
+        weatherManager?.setManualWeatherCode(weatherCode)
+    }
+
+    func resetManualWeather() {
+        weatherManager?.resetManualWeather()
+    }
+
+    func setManualTimeOfDay(_ timeOfDay: String?) {
+        weatherManager?.setManualTimeOfDay(timeOfDay)
+    }
 }

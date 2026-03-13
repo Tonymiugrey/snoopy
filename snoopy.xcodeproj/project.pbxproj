@@ -1013,7 +1013,6 @@
 		41B60F362E0862F300DF728E /* 104_ST005_Reveal.mov in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CB2E0718A8007177A8 /* 104_ST005_Reveal.mov */; };
 		41B60F372E0862F300DF728E /* 104_ST006_Hide_A.mov in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CC2E0718A8007177A8 /* 104_ST006_Hide_A.mov */; };
 		41B60F382E0862F300DF728E /* 104_ST006_Hide_B.mov in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CD2E0718A8007177A8 /* 104_ST006_Hide_B.mov */; };
-		41B60F392E0862F300DF728E /* Config.plist in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CE2E0718A8007177A8 /* Config.plist */; };
 		41B60F3A2E0862F300DF728E /* halftone_pattern.png in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CF2E0718A8007177A8 /* halftone_pattern.png */; };
 		41B907D12E0718A9007177A8 /* 102_ST002_Hide_B.mov in Resources */ = {isa = PBXBuildFile; fileRef = 41B907B02E0718A8007177A8 /* 102_ST002_Hide_B.mov */; };
 		41B907D22E0718A9007177A8 /* 102_TM004_Hide_Outline_000025.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B905B82E0718A8007177A8 /* 102_TM004_Hide_Outline_000025.heic */; };
@@ -1604,7 +1603,6 @@
 		41B90A1B2E0718A9007177A8 /* 101_TM001_Reveal_Outline_000015.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9045A2E0718A8007177A8 /* 101_TM001_Reveal_Outline_000015.heic */; };
 		41B90A1C2E0718A9007177A8 /* 101_TM001_Reveal_Mask_000011.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B904292E0718A8007177A8 /* 101_TM001_Reveal_Mask_000011.heic */; };
 		41B90A1D2E0718A9007177A8 /* 103_TM005_Hide_Mask_000009.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9060D2E0718A8007177A8 /* 103_TM005_Hide_Mask_000009.heic */; };
-		41B90A1E2E0718A9007177A8 /* Config.plist in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CE2E0718A8007177A8 /* Config.plist */; };
 		41B90A1F2E0718A9007177A8 /* 101_TM002_Reveal_Outline_000039.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9050A2E0718A8007177A8 /* 101_TM002_Reveal_Outline_000039.heic */; };
 		41B90A202E0718A9007177A8 /* 104_TM007_Hide_Mask_000023.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B907172E0718A8007177A8 /* 104_TM007_Hide_Mask_000023.heic */; };
 		41B90A212E0718A9007177A8 /* 101_TM001_Hide_Outline_000034.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B904132E0718A8007177A8 /* 101_TM001_Hide_Outline_000034.heic */; };
@@ -2612,7 +2610,6 @@
 		41B90E0B2E0718A9007177A8 /* 101_TM001_Reveal_Outline_000015.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9045A2E0718A8007177A8 /* 101_TM001_Reveal_Outline_000015.heic */; };
 		41B90E0C2E0718A9007177A8 /* 101_TM001_Reveal_Mask_000011.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B904292E0718A8007177A8 /* 101_TM001_Reveal_Mask_000011.heic */; };
 		41B90E0D2E0718A9007177A8 /* 103_TM005_Hide_Mask_000009.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9060D2E0718A8007177A8 /* 103_TM005_Hide_Mask_000009.heic */; };
-		41B90E0E2E0718A9007177A8 /* Config.plist in Resources */ = {isa = PBXBuildFile; fileRef = 41B907CE2E0718A8007177A8 /* Config.plist */; };
 		41B90E0F2E0718A9007177A8 /* 101_TM002_Reveal_Outline_000039.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B9050A2E0718A8007177A8 /* 101_TM002_Reveal_Outline_000039.heic */; };
 		41B90E102E0718A9007177A8 /* 104_TM007_Hide_Mask_000023.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B907172E0718A8007177A8 /* 104_TM007_Hide_Mask_000023.heic */; };
 		41B90E112E0718A9007177A8 /* 101_TM001_Hide_Outline_000034.heic in Resources */ = {isa = PBXBuildFile; fileRef = 41B904132E0718A8007177A8 /* 101_TM001_Hide_Outline_000034.heic */; };
@@ -4042,7 +4039,6 @@
 		41B907CB2E0718A8007177A8 /* 104_ST005_Reveal.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = 104_ST005_Reveal.mov; sourceTree = "<group>"; };
 		41B907CC2E0718A8007177A8 /* 104_ST006_Hide_A.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = 104_ST006_Hide_A.mov; sourceTree = "<group>"; };
 		41B907CD2E0718A8007177A8 /* 104_ST006_Hide_B.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = 104_ST006_Hide_B.mov; sourceTree = "<group>"; };
-		41B907CE2E0718A8007177A8 /* Config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Config.plist; sourceTree = "<group>"; };
 		41B907CF2E0718A8007177A8 /* halftone_pattern.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = halftone_pattern.png; sourceTree = "<group>"; };
 		5151C0E82D38ECB60077D0D8 /* snoopy.saver */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = snoopy.saver; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -5378,7 +5374,6 @@
 				41B907CB2E0718A8007177A8 /* 104_ST005_Reveal.mov */,
 				41B907CC2E0718A8007177A8 /* 104_ST006_Hide_A.mov */,
 				41B907CD2E0718A8007177A8 /* 104_ST006_Hide_B.mov */,
-				41B907CE2E0718A8007177A8 /* Config.plist */,
 				41B907CF2E0718A8007177A8 /* halftone_pattern.png */,
 			);
 			path = Resources;
@@ -6111,7 +6106,6 @@
 				41B90E0B2E0718A9007177A8 /* 101_TM001_Reveal_Outline_000015.heic in Resources */,
 				41B90E0C2E0718A9007177A8 /* 101_TM001_Reveal_Mask_000011.heic in Resources */,
 				41B90E0D2E0718A9007177A8 /* 103_TM005_Hide_Mask_000009.heic in Resources */,
-				41B90E0E2E0718A9007177A8 /* Config.plist in Resources */,
 				41B90E0F2E0718A9007177A8 /* 101_TM002_Reveal_Outline_000039.heic in Resources */,
 				41B90E102E0718A9007177A8 /* 104_TM007_Hide_Mask_000023.heic in Resources */,
 				41B90E112E0718A9007177A8 /* 101_TM001_Hide_Outline_000034.heic in Resources */,
@@ -7543,7 +7537,6 @@
 				41B60F362E0862F300DF728E /* 104_ST005_Reveal.mov in Resources */,
 				41B60F372E0862F300DF728E /* 104_ST006_Hide_A.mov in Resources */,
 				41B60F382E0862F300DF728E /* 104_ST006_Hide_B.mov in Resources */,
-				41B60F392E0862F300DF728E /* Config.plist in Resources */,
 				41B60F3A2E0862F300DF728E /* halftone_pattern.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8141,7 +8134,6 @@
 				41B90A1B2E0718A9007177A8 /* 101_TM001_Reveal_Outline_000015.heic in Resources */,
 				41B90A1C2E0718A9007177A8 /* 101_TM001_Reveal_Mask_000011.heic in Resources */,
 				41B90A1D2E0718A9007177A8 /* 103_TM005_Hide_Mask_000009.heic in Resources */,
-				41B90A1E2E0718A9007177A8 /* Config.plist in Resources */,
 				41B90A1F2E0718A9007177A8 /* 101_TM002_Reveal_Outline_000039.heic in Resources */,
 				41B90A202E0718A9007177A8 /* 104_TM007_Hide_Mask_000023.heic in Resources */,
 				41B90A212E0718A9007177A8 /* 101_TM001_Hide_Outline_000034.heic in Resources */,
@@ -8850,7 +8842,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = SnoopyScreenSaverView;
 				INSTALL_PATH = "$(HOME)/Library/Screen Savers";
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.miuGrey.SnoopyScreenSaver;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -8876,7 +8868,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPrincipalClass = SnoopyScreenSaverView;
 				INSTALL_PATH = "$(HOME)/Library/Screen Savers";
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.miuGrey.SnoopyScreenSaver;
 				PRODUCT_NAME = "$(TARGET_NAME)";

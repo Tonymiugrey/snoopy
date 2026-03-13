@@ -25,5 +25,7 @@
         "strings": "off",
         "other": "off"
     },
-    "sweetpad.build.xcodeWorkspacePath": "snoopy.xcodeproj/project.xcworkspace"
+    "sweetpad.build.xcodeWorkspacePath": "snoopy.xcodeproj/project.xcworkspace",
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda"
 }

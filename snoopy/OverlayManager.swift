@@ -49,24 +49,38 @@ class OverlayManager {
             return
         }
 
-        let candidates = getFilteredVIWECandidates()
-        guard let clipToPlay = candidates.randomElement() else {
+        let (basicCandidates, conditionalCandidates) = getFilteredVIWECandidates()
+
+        let clipToPlay: SnoopyClip?
+        if !conditionalCandidates.isEmpty && Double.random(in: 0..<1) < 0.65 {
+            // 65%：从天气/时间特化内容中抽取
+            clipToPlay = conditionalCandidates.randomElement()
+            debugLog("🎲 65% 走特化分支，候选数: \(conditionalCandidates.count)")
+        } else {
+            // 35%（或无特化内容时）：从基础内容中抽取，基础为空时兜底特化
+            clipToPlay = basicCandidates.randomElement() ?? conditionalCandidates.randomElement()
+            debugLog("🎲 35% 走基础分支，候选数: \(basicCandidates.count)")
+        }
+
+        guard let clip = clipToPlay else {
             debugLog("🤷 没有可用的 VI/WE 片段可供播放。")
             return
         }
 
-        debugLog("✨ 触发叠加效果: \(clipToPlay.fileName)")
-        playOverlayClip(clipToPlay)
+        debugLog("✨ 触发叠加效果: \(clip.fileName)")
+        playOverlayClip(clip)
     }
 
     /// 根据时间和天气条件过滤 VI/WE 候选片段
-    private func getFilteredVIWECandidates() -> [SnoopyClip] {
+    /// 返回 (基础内容, 天气/时间特化内容) 两个列表，供调用方做加权抽取
+    private func getFilteredVIWECandidates() -> (basic: [SnoopyClip], conditional: [SnoopyClip]) {
         guard let weatherManager = self.weatherManager else {
             debugLog("⚠️ WeatherManager not available.")
-            return []
+            return ([], [])
         }
 
-        var candidates: [SnoopyClip] = []
+        var basicCandidates: [SnoopyClip] = []
+        var conditionalCandidates: [SnoopyClip] = []
 
         // 更新天气信息
         weatherManager.updateWeatherFromAPI()
@@ -74,111 +88,102 @@ class OverlayManager {
         let currentWeather = weatherManager.getCurrentWeather()
         let weatherAPIAvailable = weatherManager.isAPIAvailable()
 
-        // 获取当前时间
-        let currentHour = Calendar.current.component(.hour, from: Date())
-        let isNightTime = currentHour >= 18 || currentHour < 5  // 18:00-05:00 为夜晚
-        let isDayTime = currentHour >= 5 && currentHour < 18  // 05:00-18:00 为白天
+        // 获取当前时段（支持手动覆盖）
+        let timeOfDay = weatherManager.getCurrentTimeOfDay()
+        let isNightTime = (timeOfDay == "evening" || timeOfDay == "latenight")
+        let isDayTime = (timeOfDay == "day")
 
-        debugLog("🕐 当前时间: \(currentHour):xx, 夜晚模式: \(isNightTime), 白天模式: \(isDayTime)")
+        debugLog("🕐 当前时段: \(timeOfDay), 夜晚模式: \(isNightTime), 白天模式: \(isDayTime)")
         debugLog("🌤️ 当前天气: \(currentWeather), API可用: \(weatherAPIAvailable)")
 
-        // 1. 基础内容 - 始终包含
+        // 1. 基础内容 - 始终在 basicCandidates 中
         let basicVI = allClips.filter { clip in
             (clip.type == SnoopyClip.ClipType.VI_Single
                 || clip.type == SnoopyClip.ClipType.VI_Intro)
                 && (clip.fileName.contains("VI001") || clip.fileName.contains("VI005") || clip.fileName.contains("VI018"))
         }
-        candidates.append(contentsOf: basicVI)
+        basicCandidates.append(contentsOf: basicVI)
         debugLog("📋 基础内容: \(basicVI.map { $0.fileName })")
 
-        // 2. 夜晚内容 - 仅在 18:00-05:00 期间
+        // 2. 夜晚内容 - 时间特化（VI002 通用夜晚，VI003 移至晴夜晚）
         if isNightTime {
             let nightVI = allClips.filter { clip in
                 (clip.type == SnoopyClip.ClipType.VI_Single
                     || clip.type == SnoopyClip.ClipType.VI_Intro)
-                    && (clip.fileName.contains("VI002") || clip.fileName.contains("VI003"))
+                    && clip.fileName.contains("VI002")
             }
-            candidates.append(contentsOf: nightVI)
+            conditionalCandidates.append(contentsOf: nightVI)
             debugLog("🌙 夜晚内容: \(nightVI.map { $0.fileName })")
         }
 
         // 3. 天气相关内容的处理
         if weatherAPIAvailable {
-            // 天气API可用时，根据实际天气条件添加内容
-
-            // 雨天内容 - 仅在雨天
             if currentWeather == .rainy {
                 let rainyWE = allClips.filter { clip in
                     (clip.type == SnoopyClip.ClipType.WE_Single
                         || clip.type == SnoopyClip.ClipType.WE_Intro)
                         && clip.fileName.contains("WE001")
                 }
-                candidates.append(contentsOf: rainyWE)
+                conditionalCandidates.append(contentsOf: rainyWE)
                 debugLog("🌧️ 雨天内容: \(rainyWE.map { $0.fileName })")
             }
 
-            // 晴天内容 - 仅在天气晴朗时
             if currentWeather == .sunny {
-                // WE003: 05:00-18:00 期间播放
                 if isDayTime {
                     let sunnyDayWE = allClips.filter { clip in
                         (clip.type == SnoopyClip.ClipType.WE_Single
                             || clip.type == SnoopyClip.ClipType.WE_Intro)
                             && clip.fileName.contains("WE003")
                     }
-                    candidates.append(contentsOf: sunnyDayWE)
+                    conditionalCandidates.append(contentsOf: sunnyDayWE)
                     debugLog("☀️ 晴天白天内容: \(sunnyDayWE.map { $0.fileName })")
                 }
 
-                // VI004: 18:00-05:00 期间播放
                 if isNightTime {
                     let sunnyNightVI = allClips.filter { clip in
                         (clip.type == SnoopyClip.ClipType.VI_Single
                             || clip.type == SnoopyClip.ClipType.VI_Intro)
-                            && clip.fileName.contains("VI004")
+                            && (clip.fileName.contains("VI003") || clip.fileName.contains("VI004"))
                     }
-                    candidates.append(contentsOf: sunnyNightVI)
+                    conditionalCandidates.append(contentsOf: sunnyNightVI)
                     debugLog("☀️ 晴天夜晚内容: \(sunnyNightVI.map { $0.fileName })")
                 }
             }
         } else {
-            // 天气API不可用时，将雨天和晴天内容都添加到随机列表中
+            // 天气API不可用时，回退模式：所有天气内容均视为特化内容
             debugLog("⚠️ 天气API不可用，启用回退模式：添加所有天气相关内容")
 
-            // 添加雨天内容
             let rainyWE = allClips.filter { clip in
                 (clip.type == SnoopyClip.ClipType.WE_Single
                     || clip.type == SnoopyClip.ClipType.WE_Intro) && clip.fileName.contains("WE001")
             }
-            candidates.append(contentsOf: rainyWE)
+            conditionalCandidates.append(contentsOf: rainyWE)
             debugLog("🌧️ 回退模式-雨天内容: \(rainyWE.map { $0.fileName })")
 
-            // 添加晴天内容（仍按时间限制）
-            // WE003: 05:00-18:00 期间播放
             if isDayTime {
                 let sunnyDayWE = allClips.filter { clip in
                     (clip.type == SnoopyClip.ClipType.WE_Single
                         || clip.type == SnoopyClip.ClipType.WE_Intro)
                         && clip.fileName.contains("WE003")
                 }
-                candidates.append(contentsOf: sunnyDayWE)
+                conditionalCandidates.append(contentsOf: sunnyDayWE)
                 debugLog("☀️ 回退模式-晴天白天内容: \(sunnyDayWE.map { $0.fileName })")
             }
 
-            // VI004: 18:00-05:00 期间播放
             if isNightTime {
                 let sunnyNightVI = allClips.filter { clip in
                     (clip.type == SnoopyClip.ClipType.VI_Single
                         || clip.type == SnoopyClip.ClipType.VI_Intro)
-                        && clip.fileName.contains("VI004")
+                        && (clip.fileName.contains("VI003") || clip.fileName.contains("VI004"))
                 }
-                candidates.append(contentsOf: sunnyNightVI)
+                conditionalCandidates.append(contentsOf: sunnyNightVI)
                 debugLog("☀️ 回退模式-晴天夜晚内容: \(sunnyNightVI.map { $0.fileName })")
             }
         }
 
-        debugLog("🎯 最终候选片段: \(candidates.map { $0.fileName })")
-        return candidates
+        debugLog("🎯 基础候选: \(basicCandidates.map { $0.fileName })")
+        debugLog("🎯 特化候选: \(conditionalCandidates.map { $0.fileName })")
+        return (basicCandidates, conditionalCandidates)
     }
 
     private func playOverlayClip(_ clip: SnoopyClip) {
