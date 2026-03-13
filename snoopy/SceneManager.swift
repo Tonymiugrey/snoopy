@@ -62,6 +62,13 @@ class SceneManager {
         skView.ignoresSiblingOrder = true
         skView.allowsTransparency = true
 
+        // 在 P3 屏幕（如 MacBook）上，Metal 层默认使用显示器原生色彩空间。
+        // 视频内容为 Rec.709（sRGB 色域），若不声明色彩空间，RGB 数值会被当作 P3
+        // 来解读，导致过饱和。显式设置为 sRGB 后，系统会正确地从 sRGB 映射到 P3。
+        if let metalLayer = skView.layer as? CAMetalLayer {
+            metalLayer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
+        }
+
         scene.scaleMode = .aspectFill
         scene.backgroundColor = .clear
 
