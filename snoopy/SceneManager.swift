@@ -189,7 +189,10 @@ class SceneManager {
         let weatherString = colorPaletteManager.getWeatherString(from: weatherManager)
 
         // 获取匹配的调色板
-        guard let palette = colorPaletteManager.getColorPalette(for: weatherString, timeOfDay: weatherManager.getCurrentTimeOfDay()) else {
+        guard
+            let palette = colorPaletteManager.getColorPalette(
+                for: weatherString, timeOfDay: weatherManager.getCurrentTimeOfDay())
+        else {
             debugLog("❌ 无法获取调色板，使用默认黑色背景")
             bgNode.color = .black
             bgNode.alpha = 1

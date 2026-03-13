@@ -100,7 +100,8 @@ class OverlayManager {
         let basicVI = allClips.filter { clip in
             (clip.type == SnoopyClip.ClipType.VI_Single
                 || clip.type == SnoopyClip.ClipType.VI_Intro)
-                && (clip.fileName.contains("VI001") || clip.fileName.contains("VI005") || clip.fileName.contains("VI018"))
+                && (clip.fileName.contains("VI001") || clip.fileName.contains("VI005")
+                    || clip.fileName.contains("VI018"))
         }
         basicCandidates.append(contentsOf: basicVI)
         debugLog("📋 基础内容: \(basicVI.map { $0.fileName })")

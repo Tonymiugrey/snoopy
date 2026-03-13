@@ -114,11 +114,15 @@ class ColorPaletteManager {
 
         if useWeather {
             weatherPickCount += 1
-            debugLog("🎲 随机选择天气调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]")
+            debugLog(
+                "🎲 随机选择天气调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]"
+            )
             return getWeatherPalette(for: weatherString, timeOfDay: currentTimeOfDay)
         } else {
             genericPickCount += 1
-            debugLog("🎲 随机选择常规调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]")
+            debugLog(
+                "🎲 随机选择常规调色板 (roll=\(String(format: "%.2f", roll))) [天气:\(weatherPickCount) 常规:\(genericPickCount)]"
+            )
             return getGenericPalette(timeOfDay: currentTimeOfDay)
         }
     }

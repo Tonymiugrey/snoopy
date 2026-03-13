@@ -89,11 +89,11 @@ class WeatherManager {
         let code = Int(weatherCode) ?? 0
 
         switch code {
-        case 113:                                        // 晴天
+        case 113:  // 晴天
             newWeather = .sunny
-        case 200, 386, 389,                              // 雷阵雨 / 雷暴
-             176, 263, 266, 293, 296, 299, 302, 305,    // 小雨 / 阵雨 / 大雨
-             308, 353, 356, 359:                         // 大暴雨
+        case 200, 386, 389,  // 雷阵雨 / 雷暴
+            176, 263, 266, 293, 296, 299, 302, 305,  // 小雨 / 阵雨 / 大雨
+            308, 353, 356, 359:  // 大暴雨
             newWeather = .rainy
         default:
             newWeather = .cloudy

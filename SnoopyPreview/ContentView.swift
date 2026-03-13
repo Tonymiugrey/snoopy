@@ -5,16 +5,16 @@
 //  Created by miuGrey on 2025/5/5.
 //
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 // MARK: - Data Models
 
 struct WeatherOption: Identifiable {
-    let id: String            // palette family
+    let id: String  // palette family
     let label: String
     let icon: String
-    let code: String          // representative WWO code
+    let code: String  // representative WWO code
 
     /// WeatherManager 枚举路由结果
     var condition: String {
@@ -22,14 +22,15 @@ struct WeatherOption: Identifiable {
         switch c {
         case 113: return "sunny"
         case 200, 386, 389,
-             176, 263, 266, 293, 296, 299, 302, 305, 308, 353, 356, 359: return "rainy"
+            176, 263, 266, 293, 296, 299, 302, 305, 308, 353, 356, 359:
+            return "rainy"
         default: return "cloudy"
         }
     }
 }
 
 struct TimeOption: Identifiable {
-    let id: String            // "day" / "evening" / "latenight"
+    let id: String  // "day" / "evening" / "latenight"
     let label: String
     let icon: String
 }
@@ -65,20 +66,20 @@ struct ContentView: View {
 
     // 所有调色板天气族，每族取一个代表 code
     private let weatherOptions: [WeatherOption] = [
-        WeatherOption(id: "sunny",   label: "晴",    icon: "☀️",  code: "113"),  // → .sunny
-        WeatherOption(id: "cloudy",  label: "多云",   icon: "⛅",  code: "116"),  // → .cloudy
-        WeatherOption(id: "windy",   label: "有风",   icon: "🌬️", code: "119"),  // → .cloudy
-        WeatherOption(id: "foggy",   label: "雾/霾",  icon: "🌫️", code: "143"),  // → .cloudy
-        WeatherOption(id: "rainy",   label: "雨",    icon: "🌧️", code: "308"),  // → .rainy
-        WeatherOption(id: "stormy",  label: "雷暴",   icon: "⛈️", code: "200"),  // → .rainy
-        WeatherOption(id: "snowy",   label: "雪",    icon: "❄️",  code: "227"),  // → .cloudy
-        WeatherOption(id: "icy",     label: "冻雨/冰", icon: "🧊", code: "179"),  // → .cloudy
+        WeatherOption(id: "sunny", label: "晴", icon: "☀️", code: "113"),  // → .sunny
+        WeatherOption(id: "cloudy", label: "多云", icon: "⛅", code: "116"),  // → .cloudy
+        WeatherOption(id: "windy", label: "有风", icon: "🌬️", code: "119"),  // → .cloudy
+        WeatherOption(id: "foggy", label: "雾/霾", icon: "🌫️", code: "143"),  // → .cloudy
+        WeatherOption(id: "rainy", label: "雨", icon: "🌧️", code: "308"),  // → .rainy
+        WeatherOption(id: "stormy", label: "雷暴", icon: "⛈️", code: "200"),  // → .rainy
+        WeatherOption(id: "snowy", label: "雪", icon: "❄️", code: "227"),  // → .cloudy
+        WeatherOption(id: "icy", label: "冻雨/冰", icon: "🧊", code: "179"),  // → .cloudy
     ]
 
     private let timeOptions: [TimeOption] = [
-        TimeOption(id: "day",       label: "白天",  icon: "🌤️"),   // 06:00–18:00
-        TimeOption(id: "evening",   label: "傍晚",  icon: "🌆"),   // 18:00–22:00
-        TimeOption(id: "latenight", label: "深夜",  icon: "🌃"),   // 22:00–06:00
+        TimeOption(id: "day", label: "白天", icon: "🌤️"),  // 06:00–18:00
+        TimeOption(id: "evening", label: "傍晚", icon: "🌆"),  // 18:00–22:00
+        TimeOption(id: "latenight", label: "深夜", icon: "🌃"),  // 22:00–06:00
     ]
 
     // 当前 WeatherManager 路由状态
@@ -89,28 +90,28 @@ struct ContentView: View {
 
     private var conditionLabel: String {
         switch currentCondition {
-        case "sunny":  return ".sunny"
-        case "rainy":  return ".rainy"
+        case "sunny": return ".sunny"
+        case "rainy": return ".rainy"
         case "cloudy": return ".cloudy"
-        default:       return "auto (API)"
+        default: return "auto (API)"
         }
     }
 
     private var conditionColor: Color {
         switch currentCondition {
-        case "sunny":  return .yellow
-        case "rainy":  return .blue
+        case "sunny": return .yellow
+        case "rainy": return .blue
         case "cloudy": return Color(red: 0.6, green: 0.8, blue: 1.0)
-        default:       return .white.opacity(0.5)
+        default: return .white.opacity(0.5)
         }
     }
 
     private var timeLabel: String {
         switch manualTimeOfDay {
-        case "day":       return "day  (06–18)"
-        case "evening":   return "evening  (18–22)"
+        case "day": return "day  (06–18)"
+        case "evening": return "evening  (18–22)"
         case "latenight": return "latenight  (22–06)"
-        default:          return "auto (系统时间)"
+        default: return "auto (系统时间)"
         }
     }
 
@@ -118,7 +119,7 @@ struct ContentView: View {
         ZStack {
             SnoopyScreenSaverViewWrapper(
                 manualWeatherCode: $manualWeatherCode,
-                manualTimeOfDay:   $manualTimeOfDay
+                manualTimeOfDay: $manualTimeOfDay
             )
             .edgesIgnoringSafeArea(.all)
 
@@ -162,13 +163,17 @@ struct ContentView: View {
 
                     // ── 时段控制 ────────────────────────────────
                     HStack(spacing: 8) {
-                        controlButton(label: "自动", icon: "🕐",
-                                      isSelected: manualTimeOfDay == nil, color: .gray) {
+                        controlButton(
+                            label: "自动", icon: "🕐",
+                            isSelected: manualTimeOfDay == nil, color: .gray
+                        ) {
                             manualTimeOfDay = nil
                         }
                         ForEach(timeOptions) { opt in
-                            controlButton(label: opt.label, icon: opt.icon,
-                                          isSelected: manualTimeOfDay == opt.id, color: .purple) {
+                            controlButton(
+                                label: opt.label, icon: opt.icon,
+                                isSelected: manualTimeOfDay == opt.id, color: .purple
+                            ) {
                                 manualTimeOfDay = opt.id
                             }
                         }
@@ -178,14 +183,18 @@ struct ContentView: View {
 
                     // ── 天气控制 ────────────────────────────────
                     HStack(spacing: 6) {
-                        controlButton(label: "自动", icon: "🌐",
-                                      isSelected: manualWeatherCode == nil, color: .gray) {
+                        controlButton(
+                            label: "自动", icon: "🌐",
+                            isSelected: manualWeatherCode == nil, color: .gray
+                        ) {
                             manualWeatherCode = nil
                         }
                         ForEach(weatherOptions) { opt in
-                            controlButton(label: opt.label, icon: opt.icon,
-                                          isSelected: manualWeatherCode == opt.code,
-                                          color: colorForCondition(opt.condition)) {
+                            controlButton(
+                                label: opt.label, icon: opt.icon,
+                                isSelected: manualWeatherCode == opt.code,
+                                color: colorForCondition(opt.condition)
+                            ) {
                                 manualWeatherCode = opt.code
                             }
                         }
@@ -204,7 +213,7 @@ struct ContentView: View {
         switch condition {
         case "sunny": return .orange
         case "rainy": return .blue
-        default:      return .teal
+        default: return .teal
         }
     }
 
@@ -235,4 +244,3 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-
