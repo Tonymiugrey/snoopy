@@ -64,8 +64,9 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     /// 获取当前视图所在屏幕的 CGDirectDisplayID。
     /// 在 startAnimation() 之前可能为 nil（视图尚未进入窗口层级）。
     private var currentDisplayID: UInt32? {
-        guard let screenNumber = self.window?.screen?.deviceDescription[
-            NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        guard
+            let screenNumber = self.window?.screen?.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
         else { return nil }
         return screenNumber.uint32Value
     }
@@ -79,7 +80,7 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         }
         // 仅 lame-duck 同一屏幕的实例
         if let senderDisplayID = notification.userInfo?["displayID"] as? UInt32,
-           let myDisplayID = currentDisplayID
+            let myDisplayID = currentDisplayID
         {
             guard senderDisplayID == myDisplayID else { return }
         }
