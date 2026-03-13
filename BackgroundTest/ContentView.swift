@@ -12,8 +12,8 @@ import SwiftUI
 struct ContentView: View {
     // MARK: - State Properties
     @State private var isAutoMode = true
-    @State private var manualWeatherInput = ""
-    @State private var selectedTimeOfDay = "day"
+    @State private var selectedWeather = "晴"
+    @State private var selectedTime = Date()
     @State private var currentPalette: ColorPalette?
     @State private var statusMessage = "准备就绪"
 
@@ -27,6 +27,18 @@ struct ContentView: View {
         "day": "白天",
         "evening": "傍晚",
         "latenight": "深夜",
+    ]
+    
+    private let weatherOptions = [
+        "晴", "少云", "晴间多云", "多云", "阴", "有风", "平静", "微风", "和风", "清风", 
+        "强风/劲风", "疾风", "大风", "烈风", "风暴", "狂爆风", "飓风", "热带风暴", 
+        "霾", "中度霾", "重度霾", "严重霾", "阵雨", "雷阵雨", "雷阵雨并伴有冰雹", 
+        "小雨", "中雨", "大雨", "暴雨", "大暴雨", "特大暴雨", "强阵雨", "强雷阵雨", 
+        "极端降雨", "毛毛雨/细雨", "雨", "小雨-中雨", "中雨-大雨", "大雨-暴雨", 
+        "暴雨-大暴雨", "大暴雨-特大暴雨", "雨雪天气", "雨夹雪", "阵雨夹雪", "冻雨", 
+        "雪", "阵雪", "小雪", "中雪", "大雪", "暴雪", "小雪-中雪", "中雪-大雪", 
+        "大雪-暴雪", "浮尘", "扬沙", "沙尘暴", "强沙尘暴", "龙卷风", "雾", "浓雾", 
+        "强浓雾", "轻雾", "大雾", "特强浓雾", "热", "冷", "未知"
     ]
 
     var body: some View {
@@ -103,27 +115,28 @@ struct ContentView: View {
                     if !isAutoMode {
                         VStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("天气输入")
+                                Text("天气类型")
                                     .font(.subheadline)
                                     .foregroundColor(.white)
 
-                                TextField("输入天气描述 (如: 晴天、雨、雪等)", text: $manualWeatherInput)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                Picker("天气类型", selection: $selectedWeather) {
+                                    ForEach(weatherOptions, id: \.self) { weather in
+                                        Text(weather).tag(weather)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
                             }
 
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("时间段")
+                                Text("选择时间")
                                     .font(.subheadline)
                                     .foregroundColor(.white)
 
-                                Picker("时间段", selection: $selectedTimeOfDay) {
-                                    ForEach(Array(timeOptions.keys), id: \.self) { key in
-                                        Text(timeOptions[key] ?? key).tag(key)
-                                    }
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(8)
+                                DatePicker("时间", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                                    .datePickerStyle(CompactDatePickerStyle())
+                                    .colorScheme(.dark)
+                                    .background(Color.white.opacity(0.1))
+                                    .cornerRadius(8)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -134,7 +147,7 @@ struct ContentView: View {
 
                     // 确认按钮
                     Button(action: generateBackground) {
-                        Text(isAutoMode ? "自动生成背景" : "应用设置")
+                        Text(isAutoMode ? "自动生成背景" : "应用选择的配色")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -197,10 +210,15 @@ struct ContentView: View {
             weatherString = colorPaletteManager.getWeatherString(from: weatherManager)
             statusMessage = "自动模式 - 天气: \(weatherString ?? "无法获取")"
         } else {
-            // 手动模式：使用用户输入
-            weatherString = manualWeatherInput.isEmpty ? nil : manualWeatherInput
+            // 手动模式：使用用户选择的天气和时间
+            let timeOfDay = getTimeOfDay(from: selectedTime)
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            let timeString = formatter.string(from: selectedTime)
+            
+            weatherString = selectedWeather
             statusMessage =
-                "手动模式 - 天气: \(weatherString ?? "未输入"), 时间: \(timeOptions[selectedTimeOfDay] ?? selectedTimeOfDay)"
+                "手动模式 - 天气: \(weatherString ?? "未选择"), 时间: \(timeString) (\(timeOptions[timeOfDay] ?? timeOfDay))"
         }
 
         // 获取调色板
@@ -210,8 +228,10 @@ struct ContentView: View {
             palette = colorPaletteManager.getColorPalette(for: weatherString)
         } else {
             // 手动模式：创建临时管理器来处理手动时间设置
-            palette = getManualColorPalette(
-                weatherString: weatherString, timeOfDay: selectedTimeOfDay)
+            let timeOfDay = getTimeOfDay(from: selectedTime)
+            let result = getManualColorPalette(weatherString: weatherString, timeOfDay: timeOfDay)
+            palette = result.palette
+            statusMessage = result.message
         }
 
         guard let selectedPalette = palette else {
@@ -222,10 +242,9 @@ struct ContentView: View {
         // 应用颜色到SpriteKit场景
         applyPaletteToScene(selectedPalette)
 
-        // 更新状态
+        // 更新状态 - 保持当前的状态消息（已在获取调色板时设置）
         withAnimation(.easeInOut(duration: 0.5)) {
             self.currentPalette = selectedPalette
-            statusMessage = "✅ 背景已更新"
             debugLog(
                 "🎨 背景已更新 - 天气: \(weatherString ?? "无"), 背景色: \(selectedPalette.backgroundColor), 叠加色: \(selectedPalette.overlayColor)"
             )
@@ -257,13 +276,29 @@ struct ContentView: View {
         debugLog("🎨 已应用调色板到SpriteKit场景")
     }
 
-    private func getManualColorPalette(weatherString: String?, timeOfDay: String) -> ColorPalette? {
+    private func getManualColorPalette(weatherString: String?, timeOfDay: String) -> (palette: ColorPalette?, message: String) {
         // 直接使用主程序的ColorPaletteManager，但需要手动设置时间
-        return ManualColorPaletteHelper.getColorPalette(
+        let result = ManualColorPaletteHelper.getColorPaletteWithMessage(
             for: weatherString,
             timeOfDay: timeOfDay,
             using: colorPaletteManager
         )
+        return result
+    }
+    
+    private func getTimeOfDay(from date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        
+        switch hour {
+        case 6..<18:
+            return "day"
+        case 18..<22:
+            return "evening"
+        case 22...23, 0..<6:
+            return "latenight"
+        default:
+            return "day"
+        }
     }
 }
 
@@ -282,21 +317,21 @@ struct SpriteKitViewRepresentable: NSViewRepresentable {
 
 // MARK: - Manual Color Palette Helper
 struct ManualColorPaletteHelper {
-    static func getColorPalette(
+    static func getColorPaletteWithMessage(
         for weatherString: String?, timeOfDay: String, using manager: ColorPaletteManager
-    ) -> ColorPalette? {
+    ) -> (palette: ColorPalette?, message: String) {
         // 简化的匹配逻辑，直接加载和匹配调色板
         guard
             let plistPath = Bundle.main.path(forResource: "ColorPaletteConfig", ofType: "plist")
                 ?? ("/Users/miugrey/Projects/snoopy/snoopy/ColorPaletteConfig.plist" as String?),
             let plistData = NSDictionary(contentsOfFile: plistPath),
-            let palettesDict = plistData["colorPalettes"] as? [String: [String: Any]]
+            let palettesDict = plistData["weatherColorPalettes"] as? [String: [String: Any]]
         else {
             debugLog("❌ ManualHelper: 无法加载 ColorPaletteConfig.plist")
-            return nil
+            return (nil, "❌ 无法加载配色配置文件")
         }
 
-        var colorPalettes: [ColorPalette] = []
+        var weatherColorPalettes: [ColorPalette] = []
 
         for (_, paletteInfo) in palettesDict {
             guard let weather = paletteInfo["weather"] as? [String],
@@ -317,44 +352,52 @@ struct ManualColorPaletteHelper {
                 overlayColor: overlayColor
             )
 
-            colorPalettes.append(palette)
+            weatherColorPalettes.append(palette)
         }
+
+        let timeNames = ["day": "白天", "evening": "傍晚", "latenight": "深夜"]
 
         // 模糊匹配逻辑
         if let weather = weatherString, !weather.isEmpty {
             // 查找匹配天气和时间的调色板
-            for palette in colorPalettes {
+            for palette in weatherColorPalettes {
                 if palette.timeOfDay == timeOfDay {
                     for weatherKeyword in palette.weather {
                         if weather.contains(weatherKeyword) {
-                            debugLog(
-                                "🎨 手动匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword), 时间: \(timeOfDay)"
-                            )
-                            return palette
+                            let message = "✅ 手动匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword), 时间: \(timeNames[timeOfDay] ?? timeOfDay)"
+                            debugLog("🎨 \(message)")
+                            return (palette, message)
                         }
                     }
                 }
             }
 
             // 尝试只匹配天气（任意时间）
-            for palette in colorPalettes {
+            for palette in weatherColorPalettes {
                 for weatherKeyword in palette.weather {
                     if weather.contains(weatherKeyword) {
-                        debugLog("🎨 手动部分匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword)")
-                        return palette
+                        let message = "✅ 手动部分匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword), 时间: \(timeNames[palette.timeOfDay] ?? palette.timeOfDay)"
+                        debugLog("🎨 \(message)")
+                        return (palette, message)
                     }
                 }
             }
         }
 
         // 根据时间随机选择
-        let matchingPalettes = colorPalettes.filter { $0.timeOfDay == timeOfDay }
+        let matchingPalettes = weatherColorPalettes.filter { $0.timeOfDay == timeOfDay }
         if let randomPalette = matchingPalettes.randomElement() {
-            debugLog("🎨 手动随机选择调色板 - 时间: \(timeOfDay)")
-            return randomPalette
+            let message = "✅ 手动随机选择调色板 - 时间: \(timeNames[timeOfDay] ?? timeOfDay)"
+            debugLog("🎨 \(message)")
+            return (randomPalette, message)
         }
 
-        return colorPalettes.randomElement()
+        if let randomPalette = weatherColorPalettes.randomElement() {
+            let message = "✅ 随机选择调色板 - 时间: \(timeNames[randomPalette.timeOfDay] ?? randomPalette.timeOfDay)"
+            return (randomPalette, message)
+        }
+
+        return (nil, "❌ 无法找到匹配的调色板")
     }
 
     private static func createColor(from dict: [String: Any]) -> NSColor {

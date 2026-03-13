@@ -5,6 +5,11 @@ import SpriteKit
 @objc(SnoopyScreenSaverView)
 class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
+    // Lame-Duck 实例管理：新实例创建时通知旧实例停止工作
+    // 这个机制替代对 willstop 通知的依赖，在 macOS Sonoma+ 上通知不再可靠
+    private static let newInstanceNotification = Notification.Name("com.snoopy.screensaver.newInstance")
+    private var isLameDuck = false
+
     // 所有管理器
     private var stateManager: StateManager!
     private var sceneManager: SceneManager!
@@ -34,7 +39,19 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     private func commonInit() {
         animationTimeInterval = 1.0 / 24.0
 
-        // 在Sonoma上延迟初始化，避免legacyScreenSaver问题
+        // 通知所有已存在的实例进入 lame-duck 状态
+        // 必须在自己注册为观察者之前发出，确保旧实例能收到
+        NotificationCenter.default.post(name: SnoopyScreenSaverView.newInstanceNotification, object: self)
+
+        // 注册监听新实例通知，当有更新的实例创建时，本实例进入 lame-duck
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onNewInstance(_:)),
+            name: SnoopyScreenSaverView.newInstanceNotification,
+            object: nil
+        )
+
+        // 在Sonoma+上延迟初始化，避免legacyScreenSaver问题
         if #available(macOS 14.0, *) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 self.performSetup()
@@ -46,8 +63,23 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         setNotifications()
     }
 
+    // 收到新实例通知时，将自身标记为 lame-duck 并停止工作
+    @objc private func onNewInstance(_ notification: Notification) {
+        // 排除自己发出的通知
+        if let sender = notification.object as? SnoopyScreenSaverView, sender === self {
+            return
+        }
+        guard !isLameDuck else { return }
+        isLameDuck = true
+        NSLog("SnoopyScreenSaverView: 进入 lame-duck 状态，让位给新实例")
+        playerManager?.queuePlayer.pause()
+        playerManager?.overlayPlayer.pause()
+        playerManager?.asPlayer.pause()
+        skView?.presentScene(nil)
+    }
+
     private func performSetup() {
-        guard !isSetupComplete else { return }
+        guard !isSetupComplete, !isLameDuck else { return }
 
         // 1. 设置 SpriteKit 视图
         skView = SKView(frame: bounds)
@@ -166,6 +198,9 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     override func startAnimation() {
         super.startAnimation()
 
+        // lame-duck 实例不响应动画请求
+        guard !isLameDuck else { return }
+
         if isSetupComplete && sequenceManager != nil {
             setupInitialStateAndPlay()
         }
@@ -220,15 +255,15 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     // 屏幕保护程序将要停止
     @objc private func willStop(_ notification: Notification) {
         debugLog("屏保将要停止")
+        stopAnimation()
 
-        // 在Sonoma上，直接退出进程避免legacyScreenSaver问题
+        // 在 Sonoma+ 上退出进程清理 legacyScreenSaver
+        // 注意：Tahoe 上此通知可能不再可靠，主要防线已改为 lame-duck 机制
         if #available(macOS 14.0, *) {
-            DispatchQueue.main.async {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 exit(0)
             }
         }
-
-        stopAnimation()
     }
 
     // 屏幕保护程序将要开始
@@ -240,9 +275,9 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     @objc private func onSleepNote(note: Notification) {
         debugLog("系统将要睡眠")
 
-        // 在Sonoma上，直接退出进程避免legacyScreenSaver问题
+        // 在 Sonoma+ 上退出进程清理
         if #available(macOS 14.0, *) {
-            DispatchQueue.main.async {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 exit(0)
             }
         }

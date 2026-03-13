@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>colorPalettes</key>
+	<key>weatherColorPalettes</key>
 	<dict>
 		<key>cloudy_day</key>
 		<dict>
@@ -107,7 +107,8 @@
 		<dict>
 			<key>weather</key>
 			<array>
-				<string>雾</string>
+				<string>沙</string>
+				<string>尘</string>
 				<string>霾</string>
 			</array>
 			<key>timeOfDay</key>
@@ -139,7 +140,8 @@
 		<dict>
 			<key>weather</key>
 			<array>
-				<string>雾</string>
+				<string>沙</string>
+				<string>尘</string>
 				<string>霾</string>
 			</array>
 			<key>timeOfDay</key>
@@ -171,7 +173,8 @@
 		<dict>
 			<key>weather</key>
 			<array>
-				<string>雾</string>
+				<string>沙</string>
+				<string>尘</string>
 				<string>霾</string>
 			</array>
 			<key>timeOfDay</key>
@@ -203,9 +206,9 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>冻</string>
 				<string>冰</string>
 				<string>冷</string>
-				<string>冻</string>
 			</array>
 			<key>timeOfDay</key>
 			<string>day</string>
@@ -236,9 +239,9 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>冻</string>
 				<string>冰</string>
 				<string>冷</string>
-				<string>冻</string>
 			</array>
 			<key>timeOfDay</key>
 			<string>evening</string>
@@ -269,9 +272,9 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>冻</string>
 				<string>冰</string>
 				<string>冷</string>
-				<string>冻</string>
 			</array>
 			<key>timeOfDay</key>
 			<string>latenight</string>
@@ -302,6 +305,7 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>雾</string>
 				<string>雨</string>
 			</array>
 			<key>timeOfDay</key>
@@ -333,6 +337,7 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>雾</string>
 				<string>雨</string>
 			</array>
 			<key>timeOfDay</key>
@@ -365,6 +370,7 @@
 			<key>weather</key>
 			<array>
 				<string>雨</string>
+				<string>雾</string>
 			</array>
 			<key>timeOfDay</key>
 			<string>latenight</string>
@@ -488,6 +494,8 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>暴雨</string>
+				<string>极端降雨</string>
 				<string>大风</string>
 				<string>强风</string>
 				<string>烈风</string>
@@ -495,8 +503,6 @@
 				<string>狂爆风</string>
 				<string>飓风</string>
 				<string>热带风暴</string>
-				<string>沙尘暴</string>
-				<string>强沙尘暴</string>
 				<string>龙卷风</string>
 				<string>疾风</string>
 				<string>劲风</string>
@@ -531,14 +537,14 @@
 			<key>weather</key>
 			<array>
 				<string>大风</string>
+				<string>极端降雨</string>
+				<string>暴雨</string>
 				<string>强风</string>
 				<string>烈风</string>
 				<string>风暴</string>
 				<string>狂爆风</string>
 				<string>飓风</string>
 				<string>热带风暴</string>
-				<string>沙尘暴</string>
-				<string>强沙尘暴</string>
 				<string>龙卷风</string>
 				<string>疾风</string>
 				<string>劲风</string>
@@ -572,6 +578,8 @@
 		<dict>
 			<key>weather</key>
 			<array>
+				<string>暴雨</string>
+				<string>极端降雨</string>
 				<string>大风</string>
 				<string>强风</string>
 				<string>烈风</string>
@@ -579,8 +587,6 @@
 				<string>狂爆风</string>
 				<string>飓风</string>
 				<string>热带风暴</string>
-				<string>沙尘暴</string>
-				<string>强沙尘暴</string>
 				<string>龙卷风</string>
 				<string>疾风</string>
 				<string>劲风</string>

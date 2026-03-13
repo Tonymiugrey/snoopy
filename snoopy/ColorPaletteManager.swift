@@ -16,7 +16,7 @@ struct ColorPalette {
 }
 
 class ColorPaletteManager {
-    private var colorPalettes: [String: ColorPalette] = [:]
+    private var weatherColorPalettes: [String: ColorPalette] = [:]
 
     init() {
         loadColorPalettes()
@@ -27,7 +27,7 @@ class ColorPaletteManager {
             let plistPath = Bundle(for: type(of: self)).path(
                 forResource: "ColorPaletteConfig", ofType: "plist"),
             let plistData = NSDictionary(contentsOfFile: plistPath),
-            let palettesDict = plistData["colorPalettes"] as? [String: [String: Any]]
+            let palettesDict = plistData["weatherColorPalettes"] as? [String: [String: Any]]
         else {
             debugLog("❌ 无法加载 ColorPaletteConfig.plist")
             return
@@ -53,10 +53,10 @@ class ColorPaletteManager {
                 overlayColor: overlayColor
             )
 
-            colorPalettes[key] = palette
+            weatherColorPalettes[key] = palette
         }
 
-        debugLog("🎨 成功加载 \(colorPalettes.count) 个调色板配置")
+        debugLog("🎨 成功加载 \(weatherColorPalettes.count) 个调色板配置")
     }
 
     private func createColor(from dict: [String: Any]) -> NSColor {
@@ -94,7 +94,7 @@ class ColorPaletteManager {
         // 如果有天气信息，尝试模糊匹配
         if let weather = weatherString, !weather.isEmpty {
             // 查找匹配天气和时间的调色板
-            for (_, palette) in colorPalettes {
+            for (_, palette) in weatherColorPalettes {
                 if palette.timeOfDay == currentTimeOfDay {
                     // 模糊匹配天气关键词
                     for weatherKeyword in palette.weather {
@@ -109,7 +109,7 @@ class ColorPaletteManager {
             }
 
             // 如果没有找到匹配的天气+时间组合，尝试只匹配天气（任意时间）
-            for (_, palette) in colorPalettes {
+            for (_, palette) in weatherColorPalettes {
                 for weatherKeyword in palette.weather {
                     if weather.contains(weatherKeyword) {
                         debugLog("🎨 部分匹配到调色板 - 天气: \(weather) -> 关键词: \(weatherKeyword) (忽略时间)")
@@ -122,7 +122,7 @@ class ColorPaletteManager {
         }
 
         // 如果没有天气信息或未匹配到，根据当前时间随机选择一组颜色
-        let matchingPalettes = colorPalettes.values.filter { $0.timeOfDay == currentTimeOfDay }
+        let matchingPalettes = weatherColorPalettes.values.filter { $0.timeOfDay == currentTimeOfDay }
 
         if let randomPalette = matchingPalettes.randomElement() {
             debugLog("🎨 随机选择调色板 - 时间: \(currentTimeOfDay)")
@@ -130,7 +130,7 @@ class ColorPaletteManager {
         }
 
         // 如果连时间匹配都没有，返回任意一个调色板
-        if let fallbackPalette = colorPalettes.values.randomElement() {
+        if let fallbackPalette = weatherColorPalettes.values.randomElement() {
             debugLog("🎨 使用备选调色板")
             return fallbackPalette
         }

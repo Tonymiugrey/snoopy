@@ -25,6 +25,8 @@ class SceneManager {
     // --- Properties ---
     private let scale: CGFloat = 720.0 / 1080.0
     private let offside: CGFloat = 180.0 / 1080.0
+    // 素材原始宽高比（所有视频内容均为 16:9）
+    private let nativeAspectRatio: CGFloat = 16.0 / 9.0
     private var backgroundImages: [String] = []
 
     // --- Color Palette Manager ---
@@ -37,6 +39,19 @@ class SceneManager {
         self.skView = SKView(frame: bounds)
         self.scene = SKScene(size: bounds.size)
         loadBackgroundImages()
+    }
+
+    /// 计算在给定场景尺寸下，以 aspect-fill 方式显示 16:9 内容所需的节点尺寸。
+    /// 节点会被居中放置，超出屏幕边缘的部分由 SKView 裁剪。
+    func aspectFillSize(for sceneSize: CGSize) -> CGSize {
+        let screenAspect = sceneSize.width / sceneSize.height
+        if screenAspect > nativeAspectRatio {
+            // 屏幕比内容更宽（超宽屏）：以宽度为准，高度按比例撑满并裁剪
+            return CGSize(width: sceneSize.width, height: sceneSize.width / nativeAspectRatio)
+        } else {
+            // 屏幕比内容更高（如 16:10）：以高度为准，宽度按比例撑满并裁剪
+            return CGSize(width: sceneSize.height * nativeAspectRatio, height: sceneSize.height)
+        }
     }
 
     func setupScene(mainPlayer: AVQueuePlayer, overlayPlayer: AVQueuePlayer, asPlayer: AVPlayer) {
@@ -90,7 +105,7 @@ class SceneManager {
         // Layer 3: Main Video Node - Initialize WITH player (用于播放BP、AP、CM、ST、RPH)
         let videoNode = SKVideoNode(avPlayer: mainPlayer)
         videoNode.position = CGPoint(x: scene.size.width / 2, y: scene.size.height / 2)
-        videoNode.size = scene.size
+        videoNode.size = aspectFillSize(for: scene.size)
         videoNode.zPosition = 3  // 常规内容在Layer 3
         videoNode.name = "videoNode"
         scene.addChild(videoNode)
@@ -99,7 +114,7 @@ class SceneManager {
         // Layer 4: Overlay Node (For VI/WE) - Initialize WITH player
         let overlayNode = SKVideoNode(avPlayer: overlayPlayer)
         overlayNode.position = CGPoint(x: scene.size.width / 2, y: scene.size.height / 2)
-        overlayNode.size = scene.size  // Adjust size/position as needed for overlays
+        overlayNode.size = aspectFillSize(for: scene.size)
         overlayNode.zPosition = 4
         overlayNode.name = "overlayNode"
         overlayNode.isHidden = true  // Initially hidden
@@ -116,14 +131,14 @@ class SceneManager {
         // AS/SS Video Node - Initialize WITH independent AS player
         let asVideoNode = SKVideoNode(avPlayer: asPlayer)
         asVideoNode.position = CGPoint.zero  // Position relative to cropNode
-        asVideoNode.size = scene.size
+        asVideoNode.size = aspectFillSize(for: scene.size)
         asVideoNode.name = "asVideoNode"
         asVideoNode.isHidden = true  // Initially hidden until AS content plays
         cropNode.addChild(asVideoNode)
         self.asVideoNode = asVideoNode
 
         // Layer 15: TM Outline Node - 显示在所有内容之上
-        let outlineNode = SKSpriteNode(color: .clear, size: scene.size)
+        let outlineNode = SKSpriteNode(color: .clear, size: aspectFillSize(for: scene.size))
         outlineNode.position = CGPoint(x: scene.size.width / 2, y: scene.size.height / 2)
         outlineNode.zPosition = 15  // 在所有内容之上
         outlineNode.name = "tmOutlineNode"
@@ -251,10 +266,11 @@ class SceneManager {
     }
 
     func createTMMaskNode(size: CGSize) {
-        let maskNode = SKSpriteNode(color: .clear, size: size)
+        let fillSize = aspectFillSize(for: size)
+        let maskNode = SKSpriteNode(color: .clear, size: fillSize)
         maskNode.position = .zero  // 相对于cropNode的位置
         self.tmMaskSpriteNode = maskNode
-        debugLog("🎭 创建TM遮罩节点，尺寸: \(size)")
+        debugLog("🎭 创建TM遮罩节点，尺寸: \(fillSize)（aspect-fill 自 \(size)）")
     }
 
     func addToParentView(_ parentView: NSView) {

@@ -107,7 +107,9 @@ func logToConsole(_ message: String) {
 }
 
 func debugLog(_ message: String) {
+    #if DEBUG
     Log(level: .debug, message: message)
+    #endif
 }
 
 func infoLog(_ message: String) {

@@ -358,9 +358,9 @@ class SnoopyClip: NSObject {
         // Weighted random selection EXCLUDING RPH for BP continuation
         let nextType = weightedRandomSelection(
             options: [
-                (type: "BP_To", weight: 0.4),
-                (type: "AP", weight: 0.3),
-                (type: "CM", weight: 0.3),
+                (type: "BP_To", weight: 0.3),
+                (type: "AP", weight: 0.2),
+                (type: "CM", weight: 0.5),
                 // (type: "RPH", weight: 0.2)
             ]
         )
