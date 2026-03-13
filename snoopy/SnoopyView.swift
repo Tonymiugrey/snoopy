@@ -7,7 +7,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
     // Lame-Duck 实例管理：新实例创建时通知旧实例停止工作
     // 这个机制替代对 willstop 通知的依赖，在 macOS Sonoma+ 上通知不再可靠
-    private static let newInstanceNotification = Notification.Name("com.snoopy.screensaver.newInstance")
+    private static let newInstanceNotification = Notification.Name(
+        "com.snoopy.screensaver.newInstance")
     private var isLameDuck = false
 
     // 所有管理器
@@ -41,7 +42,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
         // 通知所有已存在的实例进入 lame-duck 状态
         // 必须在自己注册为观察者之前发出，确保旧实例能收到
-        NotificationCenter.default.post(name: SnoopyScreenSaverView.newInstanceNotification, object: self)
+        NotificationCenter.default.post(
+            name: SnoopyScreenSaverView.newInstanceNotification, object: self)
 
         // 注册监听新实例通知，当有更新的实例创建时，本实例进入 lame-duck
         NotificationCenter.default.addObserver(
