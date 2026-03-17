@@ -10,7 +10,6 @@ import SpriteKit
 
 class SceneManager {
     // --- Scene and Nodes ---
-    private(set) var skView: SKView?
     private(set) var scene: SKScene?
     private(set) var backgroundColorNode: SKSpriteNode?
     private(set) var halftoneNode: SKSpriteNode?
@@ -36,9 +35,22 @@ class SceneManager {
     init(bounds: NSRect, weatherManager: WeatherManager) {
         self.colorPaletteManager = ColorPaletteManager()
         self.weatherManager = weatherManager
-        self.skView = SKView(frame: bounds)
         self.scene = SKScene(size: bounds.size)
         loadBackgroundImages()
+    }
+
+    func configure(skView: SKView) {
+        skView.wantsLayer = true
+        skView.layer?.backgroundColor = NSColor.clear.cgColor
+        skView.ignoresSiblingOrder = true
+        skView.allowsTransparency = true
+
+        // 在 P3 屏幕（如 MacBook）上，Metal 层默认使用显示器原生色彩空间。
+        // 视频内容为 Rec.709（sRGB 色域），若不声明色彩空间，RGB 数值会被当作 P3
+        // 来解读，导致过饱和。显式设置为 sRGB 后，系统会正确地从 sRGB 映射到 P3。
+        if let metalLayer = skView.layer as? CAMetalLayer {
+            metalLayer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
+        }
     }
 
     /// 计算在给定场景尺寸下，以 aspect-fill 方式显示 16:9 内容所需的节点尺寸。
@@ -55,19 +67,7 @@ class SceneManager {
     }
 
     func setupScene(mainPlayer: AVQueuePlayer, overlayPlayer: AVQueuePlayer, asPlayer: AVPlayer) {
-        guard let skView = self.skView, let scene = self.scene else { return }
-
-        skView.wantsLayer = true
-        skView.layer?.backgroundColor = NSColor.clear.cgColor
-        skView.ignoresSiblingOrder = true
-        skView.allowsTransparency = true
-
-        // 在 P3 屏幕（如 MacBook）上，Metal 层默认使用显示器原生色彩空间。
-        // 视频内容为 Rec.709（sRGB 色域），若不声明色彩空间，RGB 数值会被当作 P3
-        // 来解读，导致过饱和。显式设置为 sRGB 后，系统会正确地从 sRGB 映射到 P3。
-        if let metalLayer = skView.layer as? CAMetalLayer {
-            metalLayer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
-        }
+        guard let scene = self.scene else { return }
 
         scene.scaleMode = .aspectFill
         scene.backgroundColor = .clear
@@ -153,8 +153,40 @@ class SceneManager {
         outlineNode.blendMode = .alpha
         scene.addChild(outlineNode)
         self.tmOutlineSpriteNode = outlineNode
+    }
 
-        skView.presentScene(scene)
+    func updateLayout(for size: CGSize) {
+        guard let scene = self.scene, size.width > 0, size.height > 0 else { return }
+
+        scene.size = size
+
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let fillSize = aspectFillSize(for: size)
+
+        backgroundColorNode?.size = size
+        backgroundColorNode?.position = center
+
+        halftoneNode?.size = size
+        halftoneNode?.position = center
+
+        updateBackgroundImageLayout(for: size)
+
+        videoNode?.position = center
+        videoNode?.size = fillSize
+
+        overlayNode?.position = center
+        overlayNode?.size = fillSize
+
+        cropNode?.position = center
+
+        asVideoNode?.position = .zero
+        asVideoNode?.size = fillSize
+
+        tmOutlineSpriteNode?.position = center
+        tmOutlineSpriteNode?.size = fillSize
+
+        tmMaskSpriteNode?.position = .zero
+        tmMaskSpriteNode?.size = fillSize
     }
 
     private func loadBackgroundImages() {
@@ -220,9 +252,7 @@ class SceneManager {
     }
 
     private func updateBackgroundImage() {
-        guard let imageNode = self.backgroundImageNode, !backgroundImages.isEmpty,
-            let scene = self.scene
-        else { return }
+        guard let imageNode = self.backgroundImageNode, !backgroundImages.isEmpty else { return }
 
         let randomImageName = backgroundImages.randomElement()!
 
@@ -245,34 +275,40 @@ class SceneManager {
             let texture = SKTexture(image: image)
             texture.filteringMode = .linear
 
-            // 计算尺寸参数
-            let imageAspect = image.size.height / scene.size.height
-            guard imageAspect > 0 else {
-                DispatchQueue.main.async {
-                    debugLog("❌ 错误: IS 图片高度或场景高度为零，无法计算 imageAspect。")
-                }
-                return
-            }
-
-            let newSize = CGSize(
-                width: image.size.width / imageAspect * self.scale,
-                height: scene.size.height * self.scale
-            )
-            let newPosition = CGPoint(
-                x: scene.size.width / 2,
-                y: scene.size.height / 2 - scene.size.height * self.offside
-            )
-
             // 回到主线程更新UI
             DispatchQueue.main.async {
+                guard let scene = self.scene else { return }
+
                 imageNode.texture = texture
-                imageNode.size = newSize
-                imageNode.position = newPosition
+                self.updateBackgroundImageLayout(for: scene.size)
                 imageNode.alpha = 1
 
                 debugLog("🖼️ 背景图片更新为: \(randomImageName)")
             }
         }
+    }
+
+    private func updateBackgroundImageLayout(for sceneSize: CGSize) {
+        guard let imageNode = self.backgroundImageNode,
+            let texture = imageNode.texture,
+            sceneSize.height > 0
+        else { return }
+
+        let textureSize = texture.size()
+        let imageAspect = textureSize.height / sceneSize.height
+        guard imageAspect > 0 else {
+            debugLog("❌ 错误: IS 图片高度或场景高度为零，无法计算 imageAspect。")
+            return
+        }
+
+        imageNode.size = CGSize(
+            width: textureSize.width / imageAspect * scale,
+            height: sceneSize.height * scale
+        )
+        imageNode.position = CGPoint(
+            x: sceneSize.width / 2,
+            y: sceneSize.height / 2 - sceneSize.height * offside
+        )
     }
 
     func createTMMaskNode(size: CGSize) {
@@ -281,13 +317,5 @@ class SceneManager {
         maskNode.position = .zero  // 相对于cropNode的位置
         self.tmMaskSpriteNode = maskNode
         debugLog("🎭 创建TM遮罩节点，尺寸: \(fillSize)（aspect-fill 自 \(size)）")
-    }
-
-    func addToParentView(_ parentView: NSView) {
-        guard let skView = self.skView else {
-            debugLog("Error: SKView is nil when trying to add to parent view.")
-            return
-        }
-        parentView.addSubview(skView)
     }
 }

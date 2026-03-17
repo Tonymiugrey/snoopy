@@ -33,6 +33,13 @@ class OverlayManager {
         self.overlayNode = overlayNode
     }
 
+    func updateLayout(for sceneSize: CGSize) {
+        guard let overlayNode = self.overlayNode else { return }
+
+        overlayNode.position = CGPoint(x: sceneSize.width / 2, y: sceneSize.height / 2)
+        overlayNode.size = sceneSize
+    }
+
     private func setupOverlayPlayer() {
         self.overlayPlayer = AVQueuePlayer()
         NotificationCenter.default.addObserver(

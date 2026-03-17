@@ -4084,13 +4084,6 @@
 			);
 			target = 41B60B2A2E08627700DF728E /* BackgroundTest */;
 		};
-		41CDB1D72E06E7F8008B9BDD /* Exceptions for "snoopy" folder in "snoopy" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				SnoopyView.swift.backup,
-			);
-			target = 5151C0E72D38ECB60077D0D8 /* snoopy */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -4107,7 +4100,6 @@
 		5151C0EA2D38ECB60077D0D8 /* snoopy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				41CDB1D72E06E7F8008B9BDD /* Exceptions for "snoopy" folder in "snoopy" target */,
 				41B44A072DC9154C002847F8 /* Exceptions for "snoopy" folder in "SnoopyPreview" target */,
 				41B60B4A2E0862E200DF728E /* Exceptions for "snoopy" folder in "BackgroundTest" target */,
 			);

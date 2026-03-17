@@ -24,6 +24,7 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     private var skView: SKView!
     private var isSetupComplete = false
     private var allClips: [SnoopyClip] = []
+    private var hasBroadcastDisplayClaim = false
 
     // MARK: - 初始化
 
@@ -71,6 +72,37 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         return screenNumber.uint32Value
     }
 
+    private func syncSceneLayoutToBounds() {
+        guard let skView else { return }
+
+        skView.frame = bounds
+        sceneManager?.updateLayout(for: bounds.size)
+        overlayManager?.updateLayout(for: bounds.size)
+    }
+
+    private func broadcastActiveInstanceIfNeeded(retryCount: Int = 2) {
+        guard isAnimating, !isLameDuck, !hasBroadcastDisplayClaim else { return }
+
+        guard let displayID = currentDisplayID else {
+            guard retryCount > 0 else {
+                debugLog("⚠️ 无法获取当前 displayID，跳过同屏实例淘汰广播")
+                return
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.broadcastActiveInstanceIfNeeded(retryCount: retryCount - 1)
+            }
+            return
+        }
+
+        hasBroadcastDisplayClaim = true
+        NotificationCenter.default.post(
+            name: SnoopyScreenSaverView.newInstanceNotification,
+            object: self,
+            userInfo: ["displayID": displayID]
+        )
+    }
+
     // 收到新实例通知时，将自身标记为 lame-duck 并停止工作
     // 仅当新实例与自己在同一块屏幕上时才让位，避免误杀其他屏幕的合法实例
     @objc private func onNewInstance(_ notification: Notification) {
@@ -78,12 +110,18 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         if let sender = notification.object as? SnoopyScreenSaverView, sender === self {
             return
         }
-        // 仅 lame-duck 同一屏幕的实例
-        if let senderDisplayID = notification.userInfo?["displayID"] as? UInt32,
-            let myDisplayID = currentDisplayID
-        {
-            guard senderDisplayID == myDisplayID else { return }
+
+        guard let senderDisplayID = notification.userInfo?["displayID"] as? UInt32 else {
+            debugLog("⚠️ 收到缺少 displayID 的实例通知，忽略")
+            return
         }
+
+        guard let myDisplayID = currentDisplayID else {
+            debugLog("⚠️ 当前实例尚未解析 displayID，忽略实例淘汰通知")
+            return
+        }
+
+        guard senderDisplayID == myDisplayID else { return }
         guard !isLameDuck else { return }
         isLameDuck = true
         NSLog("SnoopyScreenSaverView: 进入 lame-duck 状态，让位给新实例")
@@ -159,32 +197,35 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
                     self.playbackManager.setSequenceManager(self.sequenceManager)
                     self.playbackManager.setOverlayManager(self.overlayManager)
 
-                    // 4. 设置场景并完成初始化
-                    if let scene = self.sceneManager.scene {
-                        scene.delegate = self
-                        self.skView.presentScene(scene)
-                    }
-
-                    // 5. 在场景中设置视频节点
+                    // 4. 配置真实的渲染视图并完成初始化
+                    self.sceneManager.configure(skView: self.skView)
                     self.sceneManager.setupScene(
                         mainPlayer: self.playerManager.queuePlayer,
                         overlayPlayer: self.playerManager.overlayPlayer,
                         asPlayer: self.playerManager.asPlayer
                     )
 
-                    // 6. 在场景中设置覆盖节点
+                    if let scene = self.sceneManager.scene {
+                        scene.delegate = self
+                        self.skView.presentScene(scene)
+                    }
+
+                    // 5. 在场景中设置覆盖节点
                     if let scene = self.sceneManager.scene {
                         self.overlayManager.setupOverlayNode(in: scene)
                     }
 
-                    // 7. 检查天气（如果适用）
+                    self.syncSceneLayoutToBounds()
+
+                    // 6. 检查天气（如果适用）
                     self.weatherManager.startWeatherUpdate()
 
-                    // 8. 标记设置为完成
+                    // 7. 标记设置为完成
                     self.isSetupComplete = true
 
-                    // 9. 如果动画已经开始，现在开始播放
+                    // 8. 如果动画已经开始，现在开始播放
                     if self.isAnimating {
+                        self.broadcastActiveInstanceIfNeeded()
                         self.setupInitialStateAndPlay()
                     }
                 }
@@ -216,16 +257,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         // lame-duck 实例不响应动画请求
         guard !isLameDuck else { return }
 
-        // 在 startAnimation() 时视图已在窗口中，能拿到屏幕 displayID。
-        // 通知同屏的旧实例让位（不影响其他屏幕上的合法实例）。
-        let displayID = currentDisplayID
-        var userInfo: [String: Any] = [:]
-        if let id = displayID { userInfo["displayID"] = id }
-        NotificationCenter.default.post(
-            name: SnoopyScreenSaverView.newInstanceNotification,
-            object: self,
-            userInfo: userInfo
-        )
+        syncSceneLayoutToBounds()
+        broadcastActiveInstanceIfNeeded()
 
         if isSetupComplete && sequenceManager != nil {
             setupInitialStateAndPlay()
@@ -236,10 +269,24 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     override func stopAnimation() {
         super.stopAnimation()
 
+        hasBroadcastDisplayClaim = false
+
         // 暂停所有播放器
         playerManager?.queuePlayer.pause()
         playerManager?.overlayPlayer.pause()
         playerManager?.asPlayer.pause()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+
+        syncSceneLayoutToBounds()
+        broadcastActiveInstanceIfNeeded()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        syncSceneLayoutToBounds()
     }
 
     override func draw(_ rect: NSRect) {

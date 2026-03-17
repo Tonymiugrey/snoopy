@@ -63,6 +63,9 @@ struct SnoopyScreenSaverViewWrapper: NSViewRepresentable {
 struct ContentView: View {
     @State private var manualWeatherCode: String?
     @State private var manualTimeOfDay: String?
+    @State private var apiWeatherCode: String?
+    @State private var apiWeatherDescription: String?
+    @State private var isWeatherAPIAvailable = false
 
     // 所有调色板天气族，每族取一个代表 code
     private let weatherOptions: [WeatherOption] = [
@@ -82,17 +85,28 @@ struct ContentView: View {
         TimeOption(id: "latenight", label: "深夜", icon: "🌃"),  // 22:00–06:00
     ]
 
+    private var effectiveWeatherCode: String? {
+        manualWeatherCode ?? apiWeatherCode
+    }
+
     // 当前 WeatherManager 路由状态
     private var currentCondition: String {
-        guard let code = manualWeatherCode else { return "auto" }
-        return weatherOptions.first(where: { $0.code == code })?.condition ?? "cloudy"
+        guard let code = effectiveWeatherCode else { return "auto" }
+        let c = Int(code) ?? 0
+        switch c {
+        case 113: return "sunny"
+        case 200, 386, 389,
+            176, 263, 266, 293, 296, 299, 302, 305, 308, 353, 356, 359:
+            return "rainy"
+        default: return "cloudy"
+        }
     }
 
     private var conditionLabel: String {
         switch currentCondition {
-        case "sunny": return ".sunny"
-        case "rainy": return ".rainy"
-        case "cloudy": return ".cloudy"
+        case "sunny": return manualWeatherCode == nil ? ".sunny (API)" : ".sunny"
+        case "rainy": return manualWeatherCode == nil ? ".rainy (API)" : ".rainy"
+        case "cloudy": return manualWeatherCode == nil ? ".cloudy (API)" : ".cloudy"
         default: return "auto (API)"
         }
     }
@@ -113,6 +127,27 @@ struct ContentView: View {
         case "latenight": return "latenight  (22–06)"
         default: return "auto (系统时间)"
         }
+    }
+
+    private var apiStatusLabel: String {
+        if isWeatherAPIAvailable {
+            return "online"
+        }
+        return "offline"
+    }
+
+    private var apiStatusColor: Color {
+        isWeatherAPIAvailable ? .green : .red.opacity(0.9)
+    }
+
+    private var apiDescriptionLabel: String {
+        if let apiWeatherDescription, !apiWeatherDescription.isEmpty {
+            return apiWeatherDescription
+        }
+        if isWeatherAPIAvailable {
+            return "已连接，等待描述"
+        }
+        return "未获取到天气值"
     }
 
     var body: some View {
@@ -157,6 +192,32 @@ struct ContentView: View {
                                 .foregroundColor(.white)
                                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         }
+                    }
+
+                    HStack(spacing: 6) {
+                        Text("实时 API")
+                            .foregroundColor(.white.opacity(0.5))
+                            .font(.system(size: 11))
+                        Circle()
+                            .fill(apiStatusColor)
+                            .frame(width: 6, height: 6)
+                        Text(apiStatusLabel)
+                            .foregroundColor(apiStatusColor)
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        if let apiWeatherCode {
+                            Text("code \(apiWeatherCode)")
+                                .foregroundColor(.white.opacity(0.75))
+                                .font(.system(size: 10, design: .monospaced))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.white.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                        Text(apiDescriptionLabel)
+                            .foregroundColor(.white.opacity(0.75))
+                            .font(.system(size: 11))
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
                     }
 
                     Divider().background(Color.white.opacity(0.2))
@@ -206,6 +267,15 @@ struct ContentView: View {
                 .cornerRadius(16)
                 .padding(.bottom, 24)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: WeatherManager.weatherDidUpdateNotification)) {
+            notification in
+            apiWeatherCode = notification.userInfo?[WeatherManager.apiWeatherCodeUserInfoKey]
+                as? String
+            apiWeatherDescription =
+                notification.userInfo?[WeatherManager.apiWeatherDescriptionUserInfoKey] as? String
+            isWeatherAPIAvailable =
+                notification.userInfo?[WeatherManager.apiAvailableUserInfoKey] as? Bool ?? false
         }
     }
 
