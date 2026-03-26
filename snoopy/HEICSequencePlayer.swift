@@ -14,7 +14,7 @@ class HEICSequencePlayer {
     private var maskTextures: [SKTexture] = []
     private var outlineTextures: [SKTexture] = []
     private var currentIndex: Int = 0
-    private var animationTimer: Timer?
+    private var animationAction: SKAction?
     private let frameRate: Double = 24.0  // 24 fps
     private var isPlaying: Bool = false
     private var completion: (() -> Void)?
@@ -264,23 +264,22 @@ class HEICSequencePlayer {
             debugLog("ℹ️ 没有 outline 纹理，隐藏 outline 节点")
         }
 
-        let frameInterval = 1.0 / frameRate
-
-        animationTimer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) {
-            [weak self] _ in
-            self?.updateFrame()
-        }
-
         debugLog("🎬 HEICSequencePlayer: 开始双层播放")
         debugLog("  - Mask: \(maskTextures.count) 帧")
         debugLog("  - Outline: \(outlineTextures.count) 帧")
         debugLog("  - 帧率: \(frameRate) fps")
+
+        // 使用 SKAction 驱动帧动画，替代 Timer。
+        // SKAction 内嵌于 SpriteKit 渲染管线，在不同刷新率的多屏环境下
+        // 不会出现 Timer 回调与 SpriteKit display-link 不同步导致的冻结。
+        startSKActionAnimation()
     }
 
     // 停止播放
     func stop() {
-        animationTimer?.invalidate()
-        animationTimer = nil
+        targetMaskNode?.removeAction(forKey: "heicMaskAnimation")
+        targetOutlineNode?.removeAction(forKey: "heicOutlineAnimation")
+        animationAction = nil
         isPlaying = false
 
         debugLog("⏹️ HEICSequencePlayer: 停止播放")
@@ -288,8 +287,8 @@ class HEICSequencePlayer {
 
     // 暂停播放
     func pause() {
-        animationTimer?.invalidate()
-        animationTimer = nil
+        targetMaskNode?.isPaused = true
+        targetOutlineNode?.isPaused = true
         isPlaying = false
 
         debugLog("⏸️ HEICSequencePlayer: 暂停播放")
@@ -300,11 +299,12 @@ class HEICSequencePlayer {
         guard !maskTextures.isEmpty && !isPlaying else { return }
 
         isPlaying = true
-        let frameInterval = 1.0 / frameRate
+        targetMaskNode?.isPaused = false
+        targetOutlineNode?.isPaused = false
 
-        animationTimer = Timer.scheduledTimer(withTimeInterval: frameInterval, repeats: true) {
-            [weak self] _ in
-            self?.updateFrame()
+        // 如果 SKAction 已被移除（如 stop 后再 resume），重新启动
+        if targetMaskNode?.action(forKey: "heicMaskAnimation") == nil {
+            startSKActionAnimation()
         }
 
         debugLog("▶️ HEICSequencePlayer: 恢复播放")
@@ -350,7 +350,33 @@ class HEICSequencePlayer {
         return CMTime(seconds: currentSeconds, preferredTimescale: CMTimeScale(frameRate))
     }
 
-    // 私有方法：更新帧（双层播放）
+    // 使用 SKAction 驱动帧动画
+    private func startSKActionAnimation() {
+        guard let maskNode = targetMaskNode, !maskTextures.isEmpty else { return }
+
+        let timePerFrame = 1.0 / frameRate
+
+        // Mask 动画
+        let maskAnimate = SKAction.animate(with: maskTextures, timePerFrame: timePerFrame)
+        let maskSequence = SKAction.sequence([
+            maskAnimate,
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.currentIndex = self.maskTextures.count
+                self.isPlaying = false
+                self.completion?()
+            }
+        ])
+        maskNode.run(maskSequence, withKey: "heicMaskAnimation")
+
+        // Outline 动画（如有）
+        if let outlineNode = targetOutlineNode, !outlineTextures.isEmpty {
+            let outlineAnimate = SKAction.animate(with: outlineTextures, timePerFrame: timePerFrame)
+            outlineNode.run(outlineAnimate, withKey: "heicOutlineAnimation")
+        }
+    }
+
+    // 私有方法：更新帧（双层播放）—— 保留给 seek() 使用
     private func updateFrame() {
         guard isPlaying && !maskTextures.isEmpty else { return }
 

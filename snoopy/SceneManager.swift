@@ -45,6 +45,13 @@ class SceneManager {
         skView.ignoresSiblingOrder = true
         skView.allowsTransparency = true
 
+        // 强制 SpriteKit 以 60fps 渲染。
+        // Apple Silicon 上 SpriteKit 存在一个已知 bug：当两个显示器刷新率不同时
+        // （如 ProMotion 120Hz 内置屏 + 60Hz 外接屏），SpriteKit 的 display link
+        // 会在其中一个显示器上冻结渲染。将 preferredFramesPerSecond 固定为 60 后，
+        // 60fps 能整除 120Hz 和 60Hz，从而避免刷新率不匹配导致的渲染冻结。
+        skView.preferredFramesPerSecond = 60
+
         // 在 P3 屏幕（如 MacBook）上，Metal 层默认使用显示器原生色彩空间。
         // 视频内容为 Rec.709（sRGB 色域），若不声明色彩空间，RGB 数值会被当作 P3
         // 来解读，导致过饱和。显式设置为 sRGB 后，系统会正确地从 sRGB 映射到 P3。
