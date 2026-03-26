@@ -268,12 +268,9 @@ struct ContentView: View {
                 .padding(.bottom, 24)
             }
         }
-        .onReceive(
-            NotificationCenter.default.publisher(for: WeatherManager.weatherDidUpdateNotification)
-        ) {
+        .onReceive(NotificationCenter.default.publisher(for: WeatherManager.weatherDidUpdateNotification)) {
             notification in
-            apiWeatherCode =
-                notification.userInfo?[WeatherManager.apiWeatherCodeUserInfoKey]
+            apiWeatherCode = notification.userInfo?[WeatherManager.apiWeatherCodeUserInfoKey]
                 as? String
             apiWeatherDescription =
                 notification.userInfo?[WeatherManager.apiWeatherDescriptionUserInfoKey] as? String

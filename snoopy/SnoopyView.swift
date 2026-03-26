@@ -25,19 +25,6 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     private var isSetupComplete = false
     private var allClips: [SnoopyClip] = []
     private var hasBroadcastDisplayClaim = false
-    private weak var observedWindow: NSWindow?
-
-    /// 测试模式：禁用 lame-duck 机制，允许同进程多实例并行
-    var disableLameDuck = false
-    /// 测试模式：覆盖 SKView 的 preferredFramesPerSecond（模拟不同刷新率屏幕）
-    private var simulatedRefreshRate: Int?
-
-    // FPS 统计
-    private var lastUpdateTime: TimeInterval = 0
-    private var frameCount: Int = 0
-    private var measuredFPS: Double = 0
-    /// 每个实例发出自己的 FPS 通知，userInfo 包含 "fps" (Double) 和 "instanceID" (ObjectIdentifier hashValue)
-    static let fpsDidUpdateNotification = Notification.Name("com.snoopy.fpsDidUpdate")
 
     // MARK: - 初始化
 
@@ -75,56 +62,14 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         setNotifications()
     }
 
-    /// 获取 NSScreen 对应的 CGDirectDisplayID。
-    private func displayID(for screen: NSScreen?) -> UInt32? {
-        guard
-            let screenNumber = screen?.deviceDescription[
-                NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-        else { return nil }
-        return screenNumber.uint32Value
-    }
-
-    private func intersectionArea(between lhs: NSRect, and rhs: NSRect) -> CGFloat {
-        let intersection = lhs.intersection(rhs)
-        guard !intersection.isNull else { return 0 }
-        return intersection.width * intersection.height
-    }
-
-    /// 优先按窗口 frame 与屏幕 frame 的交集来判定所在屏幕。
-    /// 在多屏初始化阶段，window.screen 可能短暂指向错误的屏幕。
-    private func resolvedScreen() -> NSScreen? {
-        guard let window else { return nil }
-
-        let windowFrame = window.frame
-        let matchedScreen = NSScreen.screens
-            .map { ($0, intersectionArea(between: windowFrame, and: $0.frame)) }
-            .filter { $0.1 > 0 }
-            .max { $0.1 < $1.1 }?.0
-
-        if
-            let matchedScreen,
-            let windowScreen = window.screen,
-            matchedScreen !== windowScreen,
-            let matchedDisplayID = displayID(for: matchedScreen),
-            let windowDisplayID = displayID(for: windowScreen)
-        {
-            debugLog(
-                "📺 window.screen 与窗口 frame 命中的屏幕不一致，优先使用 frame 命中结果: window=\(windowDisplayID), frameMatch=\(matchedDisplayID), windowFrame=\(NSStringFromRect(windowFrame))"
-            )
-        }
-
-        return matchedScreen ?? window.screen
-    }
-
-    private var windowFrameDescription: String {
-        guard let window else { return "nil" }
-        return NSStringFromRect(window.frame)
-    }
-
     /// 获取当前视图所在屏幕的 CGDirectDisplayID。
     /// 在 startAnimation() 之前可能为 nil（视图尚未进入窗口层级）。
     private var currentDisplayID: UInt32? {
-        displayID(for: resolvedScreen())
+        guard
+            let screenNumber = self.window?.screen?.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        else { return nil }
+        return screenNumber.uint32Value
     }
 
     private func syncSceneLayoutToBounds() {
@@ -135,84 +80,22 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         overlayManager?.updateLayout(for: bounds.size)
     }
 
-    private func updateWindowObservation() {
-        let currentWindow = window
-
-        if let observedWindow, let currentWindow, observedWindow === currentWindow {
-            return
-        }
-
-        if observedWindow == nil, currentWindow == nil {
-            return
-        }
-
-        if let observedWindow {
-            NotificationCenter.default.removeObserver(
-                self,
-                name: NSWindow.didChangeScreenNotification,
-                object: observedWindow
-            )
-            NotificationCenter.default.removeObserver(
-                self,
-                name: NSWindow.didMoveNotification,
-                object: observedWindow
-            )
-        }
-
-        observedWindow = currentWindow
-
-        if let currentWindow {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(onWindowDidChangeScreen(_:)),
-                name: NSWindow.didChangeScreenNotification,
-                object: currentWindow
-            )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(onWindowDidMove(_:)),
-                name: NSWindow.didMoveNotification,
-                object: currentWindow
-            )
-        }
-    }
-
-    private func refreshDisplayBinding(reason: String) {
-        updateWindowObservation()
-        syncSceneLayoutToBounds()
-
-        guard window != nil else { return }
-
-        hasBroadcastDisplayClaim = false
-        debugLog(
-            "📺 重新同步显示绑定(\(reason)): displayID=\(String(describing: currentDisplayID)), windowFrame=\(windowFrameDescription)"
-        )
-        broadcastActiveInstanceIfNeeded(retryCount: 6)
-    }
-
-    private func broadcastActiveInstanceIfNeeded(retryCount: Int = 6) {
-        // 测试模式下不广播，避免干扰其他实例
-        guard !disableLameDuck else { return }
+    private func broadcastActiveInstanceIfNeeded(retryCount: Int = 2) {
         guard isAnimating, !isLameDuck, !hasBroadcastDisplayClaim else { return }
-
-        updateWindowObservation()
 
         guard let displayID = currentDisplayID else {
             guard retryCount > 0 else {
-                debugLog(
-                    "⚠️ 无法获取当前 displayID，跳过同屏实例淘汰广播。windowFrame=\(windowFrameDescription)"
-                )
+                debugLog("⚠️ 无法获取当前 displayID，跳过同屏实例淘汰广播")
                 return
             }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 self?.broadcastActiveInstanceIfNeeded(retryCount: retryCount - 1)
             }
             return
         }
 
         hasBroadcastDisplayClaim = true
-        debugLog("📺 广播当前实例 displayID=\(displayID), windowFrame=\(windowFrameDescription)")
         NotificationCenter.default.post(
             name: SnoopyScreenSaverView.newInstanceNotification,
             object: self,
@@ -381,7 +264,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         // lame-duck 实例不响应动画请求
         guard !isLameDuck else { return }
 
-        refreshDisplayBinding(reason: "startAnimation")
+        syncSceneLayoutToBounds()
+        broadcastActiveInstanceIfNeeded()
 
         if isSetupComplete && sequenceManager != nil {
             setupInitialStateAndPlay()
@@ -403,16 +287,13 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
 
-        refreshDisplayBinding(reason: "viewDidMoveToWindow")
+        syncSceneLayoutToBounds()
+        broadcastActiveInstanceIfNeeded()
     }
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         syncSceneLayoutToBounds()
-
-        if window != nil && !hasBroadcastDisplayClaim {
-            broadcastActiveInstanceIfNeeded(retryCount: 6)
-        }
     }
 
     override func draw(_ rect: NSRect) {
@@ -426,13 +307,6 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
     // 设置通知观察者
     private func setNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(onScreenParametersDidChange(_:)),
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil
-        )
-
         // 监听屏幕保护程序将要停止的通知
         DistributedNotificationCenter.default.addObserver(
             self,
@@ -466,8 +340,7 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         // 在 Sonoma+ 上退出进程清理 legacyScreenSaver
         // 注意：Tahoe 上此通知可能不再可靠，主要防线已改为 lame-duck 机制
         if #available(macOS 14.0, *) {
-            debugLog("⏱️ 安排本进程延迟退出清理 legacyScreenSaver")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 exit(0)
             }
         }
@@ -484,22 +357,10 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
         // 在 Sonoma+ 上退出进程清理
         if #available(macOS 14.0, *) {
-            exit(0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                exit(0)
+            }
         }
-    }
-
-    @objc private func onWindowDidChangeScreen(_ notification: Notification) {
-        refreshDisplayBinding(reason: "windowDidChangeScreen")
-    }
-
-    @objc private func onWindowDidMove(_ notification: Notification) {
-        if !hasBroadcastDisplayClaim {
-            broadcastActiveInstanceIfNeeded(retryCount: 6)
-        }
-    }
-
-    @objc private func onScreenParametersDidChange(_ notification: Notification) {
-        refreshDisplayBinding(reason: "screenParametersDidChange")
     }
 
     // MARK: - SKSceneDelegate
