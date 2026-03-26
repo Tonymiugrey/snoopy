@@ -106,9 +106,6 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     // 收到新实例通知时，将自身标记为 lame-duck 并停止工作
     // 仅当新实例与自己在同一块屏幕上时才让位，避免误杀其他屏幕的合法实例
     @objc private func onNewInstance(_ notification: Notification) {
-        // 测试模式下不参与 lame-duck 淘汰
-        guard !disableLameDuck else { return }
-
         // 排除自己发出的通知
         if let sender = notification.object as? SnoopyScreenSaverView, sender === self {
             return
@@ -203,9 +200,7 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
                     // 4. 配置真实的渲染视图并完成初始化
                     self.sceneManager.configure(skView: self.skView)
                     // 测试模式下可覆盖 SKView 的 preferredFramesPerSecond
-                    if let fps = self.simulatedRefreshRate {
-                        self.skView.preferredFramesPerSecond = fps
-                    }
+
                     self.sceneManager.setupScene(
                         mainPlayer: self.playerManager.queuePlayer,
                         overlayPlayer: self.playerManager.overlayPlayer,
@@ -366,23 +361,7 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     // MARK: - SKSceneDelegate
 
     func update(_ currentTime: TimeInterval, for scene: SKScene) {
-        // FPS 统计：每秒汇总一次并发通知
-        frameCount += 1
-        if lastUpdateTime == 0 {
-            lastUpdateTime = currentTime
-        }
-        let elapsed = currentTime - lastUpdateTime
-        if elapsed >= 1.0 {
-            measuredFPS = Double(frameCount) / elapsed
-            frameCount = 0
-            lastUpdateTime = currentTime
-            let instanceHash = ObjectIdentifier(self).hashValue
-            NotificationCenter.default.post(
-                name: SnoopyScreenSaverView.fpsDidUpdateNotification,
-                object: self,
-                userInfo: ["fps": measuredFPS, "instanceID": instanceHash]
-            )
-        }
+
     }
 
     private func setupInitialStateAndPlay() {
@@ -426,10 +405,4 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
         weatherManager?.setManualTimeOfDay(timeOfDay)
     }
 
-    // MARK: - Simulated Refresh Rate (Test)
-
-    func setSimulatedRefreshRate(_ fps: Int) {
-        simulatedRefreshRate = fps
-        skView?.preferredFramesPerSecond = fps
-    }
 }
