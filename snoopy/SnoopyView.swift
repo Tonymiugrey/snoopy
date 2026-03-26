@@ -27,6 +27,18 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     private var hasBroadcastDisplayClaim = false
     private weak var observedWindow: NSWindow?
 
+    /// 测试模式：禁用 lame-duck 机制，允许同进程多实例并行
+    var disableLameDuck = false
+    /// 测试模式：覆盖 SKView 的 preferredFramesPerSecond（模拟不同刷新率屏幕）
+    private var simulatedRefreshRate: Int?
+
+    // FPS 统计
+    private var lastUpdateTime: TimeInterval = 0
+    private var frameCount: Int = 0
+    private var measuredFPS: Double = 0
+    /// 每个实例发出自己的 FPS 通知，userInfo 包含 "fps" (Double) 和 "instanceID" (ObjectIdentifier hashValue)
+    static let fpsDidUpdateNotification = Notification.Name("com.snoopy.fpsDidUpdate")
+
     // MARK: - 初始化
 
     override init?(frame: NSRect, isPreview: Bool) {
@@ -179,6 +191,8 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     }
 
     private func broadcastActiveInstanceIfNeeded(retryCount: Int = 6) {
+        // 测试模式下不广播，避免干扰其他实例
+        guard !disableLameDuck else { return }
         guard isAnimating, !isLameDuck, !hasBroadcastDisplayClaim else { return }
 
         updateWindowObservation()
@@ -209,6 +223,9 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     // 收到新实例通知时，将自身标记为 lame-duck 并停止工作
     // 仅当新实例与自己在同一块屏幕上时才让位，避免误杀其他屏幕的合法实例
     @objc private func onNewInstance(_ notification: Notification) {
+        // 测试模式下不参与 lame-duck 淘汰
+        guard !disableLameDuck else { return }
+
         // 排除自己发出的通知
         if let sender = notification.object as? SnoopyScreenSaverView, sender === self {
             return
@@ -302,6 +319,10 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
                     // 4. 配置真实的渲染视图并完成初始化
                     self.sceneManager.configure(skView: self.skView)
+                    // 测试模式下可覆盖 SKView 的 preferredFramesPerSecond
+                    if let fps = self.simulatedRefreshRate {
+                        self.skView.preferredFramesPerSecond = fps
+                    }
                     self.sceneManager.setupScene(
                         mainPlayer: self.playerManager.queuePlayer,
                         overlayPlayer: self.playerManager.overlayPlayer,
@@ -484,7 +505,23 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
     // MARK: - SKSceneDelegate
 
     func update(_ currentTime: TimeInterval, for scene: SKScene) {
-        // 目前暂不实现
+        // FPS 统计：每秒汇总一次并发通知
+        frameCount += 1
+        if lastUpdateTime == 0 {
+            lastUpdateTime = currentTime
+        }
+        let elapsed = currentTime - lastUpdateTime
+        if elapsed >= 1.0 {
+            measuredFPS = Double(frameCount) / elapsed
+            frameCount = 0
+            lastUpdateTime = currentTime
+            let instanceHash = ObjectIdentifier(self).hashValue
+            NotificationCenter.default.post(
+                name: SnoopyScreenSaverView.fpsDidUpdateNotification,
+                object: self,
+                userInfo: ["fps": measuredFPS, "instanceID": instanceHash]
+            )
+        }
     }
 
     private func setupInitialStateAndPlay() {
@@ -526,5 +563,12 @@ class SnoopyScreenSaverView: ScreenSaverView, SKSceneDelegate {
 
     func setManualTimeOfDay(_ timeOfDay: String?) {
         weatherManager?.setManualTimeOfDay(timeOfDay)
+    }
+
+    // MARK: - Simulated Refresh Rate (Test)
+
+    func setSimulatedRefreshRate(_ fps: Int) {
+        simulatedRefreshRate = fps
+        skView?.preferredFramesPerSecond = fps
     }
 }
